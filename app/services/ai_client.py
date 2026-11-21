@@ -97,8 +97,8 @@ class AIClient:
             "Chỉ dịch nội dung chữ, mỗi câu phụ đề ngắn gọn, dễ đọc, 1 dòng duy nhất, không xuống dòng nhiều lần."
         )
 
-        prompt = f"Hãy dịch toàn bộ nội dung phụ đề SRT sau sang tiếng Việt:\n\n{srt_content}"
-        translated_srt = self._call_chat(prompt=prompt, system_prompt=system_prompt, temperature=0.3, max_tokens=3000)
+        prompt = f"Hãy dịch toàn bộ nội dung phụ đề SRT sau sang tiếng Việt:\n\n{srt_content[:2500]}"
+        translated_srt = self._call_chat(prompt=prompt, system_prompt=system_prompt, temperature=0.3, max_tokens=2000)
 
         # Remove markdown codeblocks if model outputs ```srt ... ```
         translated_srt = re.sub(r"^```[a-zA-Z]*\n", "", translated_srt)

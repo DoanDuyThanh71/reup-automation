@@ -17,7 +17,10 @@ class DubbingAgent:
         provider = config.get("TTS_PROVIDER", "vbee").lower()
         vbee_cookie = config.get("VBEE_REFRESH_TOKEN_COOKIE", "")
 
-        used_provider = provider
+        # Refresh client instances with latest config
+        self.vbee.refresh_token_cookie = vbee_cookie or self.vbee.refresh_token_cookie
+        self.edge_tts.voice = config.get("EDGE_TTS_VOICE", "vi-VN-HoaiMyNeural")
+
         # Try Vbee if requested and cookie is available
         if provider == "vbee" and vbee_cookie.strip():
             try:
@@ -31,7 +34,6 @@ class DubbingAgent:
                 }
             except Exception as e:
                 print(f"[DubbingAgent] Vbee error: {e}. Falling back to Edge-TTS...")
-                used_provider = "edge-tts"
 
         # Edge-TTS fallback
         fallback_voice = voice_code if voice_code and "Neural" in voice_code else config.get("EDGE_TTS_VOICE", "vi-VN-HoaiMyNeural")

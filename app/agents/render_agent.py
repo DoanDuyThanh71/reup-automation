@@ -50,7 +50,12 @@ class RenderAgent:
             "MarginV=35"
         )
 
-        filter_str = f"[0:v]subtitles='{local_srt_name}':force_style='{style}'[v]"
+        filter_str = (
+            f"[0:v]subtitles='{local_srt_name}':force_style='{style}'[v];"
+            f"[0:a]volume=0.25[a_orig];"
+            f"[1:a]volume=1.2[a_dub];"
+            f"[a_orig][a_dub]amix=inputs=2:duration=first:dropout_transition=2[a]"
+        )
 
         cmd = [
             ffmpeg_bin, "-y",
@@ -58,13 +63,12 @@ class RenderAgent:
             "-i", abs_dub_audio,
             "-filter_complex", filter_str,
             "-map", "[v]",
-            "-map", "1:a",
+            "-map", "[a]",
             "-c:v", "libx264",
-            "-preset", "faster",
-            "-crf", "22",
+            "-preset", "ultrafast",
+            "-crf", "24",
             "-c:a", "aac",
             "-b:a", "192k",
-            "-shortest",
             abs_out_video
         ]
 

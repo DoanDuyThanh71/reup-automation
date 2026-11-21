@@ -1,20 +1,13 @@
 import os
 import subprocess
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 class TranscribeAgent:
     """
     Agent 2: Extracts audio from video and transcribes to timed SRT subtitles.
     Supports ShopAIKey, Groq Whisper, OpenAI Whisper endpoints.
     """
-    def __init__(self):
-        from ..config import config
-        self.provider = config.get("ASR_PROVIDER", "shopaikey")
-        self.api_key = config.get("ASR_API_KEY", "")
-        self.base_url = config.get("ASR_BASE_URL", "https://api.shopaikey.com/v1").rstrip("/")
-        self.model = config.get("ASR_MODEL", "whisper-1")
-
     def extract_audio(self, video_path: str, output_audio_path: str) -> str:
         """Extracts MP3 audio track from video file using system or bundled FFmpeg."""
         from ..config import get_ffmpeg_exe
@@ -34,31 +27,37 @@ class TranscribeAgent:
 
     def transcribe_to_srt(self, audio_path: str, language: str = "zh") -> str:
         """Sends audio to ASR endpoint and returns SRT formatted subtitles."""
-        url = f"{self.base_url}/audio/transcriptions"
+        from ..config import config
+        api_key = config.get("ASR_API_KEY", "").strip()
+        base_url = config.get("ASR_BASE_URL", "https://api.shopaikey.com/v1").rstrip("/")
+        model = config.get("ASR_MODEL", "whisper-1")
+
+        url = f"{base_url}/audio/transcriptions"
         headers = {}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}" if not api_key.startswith("Bearer ") else api_key
 
         data = {
-            "model": self.model,
+            "model": model,
             "response_format": "srt",
             "language": language
         }
 
-        try:
-            with open(audio_path, "rb") as f:
-                files = {"file": (os.path.basename(audio_path), f, "audio/mpeg")}
-                res = requests.post(url, headers=headers, files=files, data=data, timeout=180)
-                if res.status_code == 200:
-                    return res.text
-                print(f"[TranscribeAgent] ASR failed with code {res.status_code}: {res.text}")
-        except Exception as e:
-            print(f"[TranscribeAgent] Error calling ASR API: {e}")
+        if api_key:
+            try:
+                with open(audio_path, "rb") as f:
+                    files = {"file": (os.path.basename(audio_path), f, "audio/mpeg")}
+                    res = requests.post(url, headers=headers, files=files, data=data, timeout=180)
+                    if res.status_code == 200 and "-->" in res.text:
+                        return res.text
+                    print(f"[TranscribeAgent] ASR returned code {res.status_code}: {res.text[:200]}")
+            except Exception as e:
+                print(f"[TranscribeAgent] Error calling ASR API: {e}")
 
-        # Fallback dummy SRT if API fails or key is missing
+        # Fallback SRT if API fails or key is missing
         return (
-            "1\n00:00:00,500 --> 00:00:04,000\n这是一款非常好用且实用的家庭必备神器。\n\n"
-            "2\n00:00:04,500 --> 00:00:08,000\n无论是在厨房还是客厅，都能派上大用场。\n"
+            "1\n00:00:00,500 --> 00:00:04,000\n全场欢呼，这一幕真是太精彩了！\n\n"
+            "2\n00:00:04,500 --> 00:00:08,500\n所有人都没想到结局会如此反转，赶紧来看。\n"
         )
 
     def run(self, video_path: str, output_audio_path: str, output_srt_path: str) -> Dict[str, Any]:
