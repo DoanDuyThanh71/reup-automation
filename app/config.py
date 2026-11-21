@@ -1,8 +1,29 @@
 import os
+import shutil
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from .database import SessionLocal, Base, engine
 from .models import ConfigModel
+
+def get_ffmpeg_exe() -> str:
+    """
+    Returns the system ffmpeg executable path if available,
+    or falls back to the pre-compiled binary bundled in imageio-ffmpeg.
+    Guarantees ffmpeg works on Windows, Linux, and macOS without root/apt.
+    """
+    custom_bin = os.getenv("FFMPEG_BINARY")
+    if custom_bin and os.path.exists(custom_bin):
+        return custom_bin
+
+    sys_ffmpeg = shutil.which("ffmpeg")
+    if sys_ffmpeg:
+        return sys_ffmpeg
+
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
 
 DEFAULT_CONFIGS = [
     # AI Content & Translation

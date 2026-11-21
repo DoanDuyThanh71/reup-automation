@@ -16,10 +16,12 @@ class TranscribeAgent:
         self.model = config.get("ASR_MODEL", "whisper-1")
 
     def extract_audio(self, video_path: str, output_audio_path: str) -> str:
-        """Extracts MP3 audio track from video file."""
+        """Extracts MP3 audio track from video file using system or bundled FFmpeg."""
+        from ..config import get_ffmpeg_exe
         os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
+        ffmpeg_bin = get_ffmpeg_exe()
         cmd = [
-            "ffmpeg", "-y",
+            ffmpeg_bin, "-y",
             "-i", video_path,
             "-vn", "-acodec", "libmp3lame", "-ar", "16000", "-ac", "1",
             output_audio_path

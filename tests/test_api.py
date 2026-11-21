@@ -10,6 +10,17 @@ def test_serve_dashboard_ui(client):
     assert "FACEBOOK_PAGE_ACCESS_TOKEN" in res.text
     assert "ASR_PROVIDER" in res.text
 
+def test_health_endpoint_and_doctor(client, db_session):
+    res = client.get("/api/health")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert data["database"] is True
+    assert data["ffmpeg_binary"]
+
+    from doctor import run_doctor
+    assert run_doctor() == 0
+
 def test_configs_endpoints_and_masking(client):
     # Save new configs via API
     payload = {

@@ -287,8 +287,24 @@ def test_connection(payload: TestConnectionRequest):
     raise HTTPException(status_code=400, detail=f"Mục tiêu kiểm tra '{target}' không hợp lệ")
 
 # ==========================================
-# REST API: Stats
+# REST API: Health & Stats
 # ==========================================
+
+@app.get("/api/health")
+def health_check(db: Session = Depends(get_db)):
+    from .config import get_ffmpeg_exe
+    ffmpeg_path = get_ffmpeg_exe()
+    db_ok = True
+    try:
+        db.query(JobModel).count()
+    except Exception:
+        db_ok = False
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "database": db_ok,
+        "ffmpeg_binary": ffmpeg_path,
+        "version": "1.0.0"
+    }
 
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
