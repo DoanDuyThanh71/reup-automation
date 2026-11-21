@@ -9,6 +9,7 @@ from ..config import config
 from .ingestion_agent import IngestionAgent
 from .transcribe_agent import TranscribeAgent
 from .content_policy_agent import ContentPolicyAgent
+from .affiliate_agent import AffiliateAgent
 from .dubbing_agent import DubbingAgent
 from .render_agent import RenderAgent
 from .publisher_agent import PublisherAgent
@@ -19,12 +20,13 @@ TEMP_DIR = os.path.join(BASE_DIR, "temp")
 
 class WorkflowOrchestrator:
     """
-    Master Multi-Agent Orchestrator. Coordinates the 6 specialized AI agents.
+    Master Multi-Agent Orchestrator. Coordinates the 7 specialized AI agents.
     """
     def __init__(self):
         self.ingestion_agent = IngestionAgent()
         self.transcribe_agent = TranscribeAgent()
         self.content_agent = ContentPolicyAgent()
+        self.affiliate_agent = AffiliateAgent()
         self.dubbing_agent = DubbingAgent()
         self.render_agent = RenderAgent()
         self.publisher_agent = PublisherAgent()
@@ -117,6 +119,24 @@ class WorkflowOrchestrator:
             job.transcript_summary = content_res["summary"]
             db.commit()
             self.log(db, job_id, "AI Biên dịch & SEO", f"Tiêu đề: {job.title}")
+
+            # -----------------------------------------------------------------
+            # Stage 3.5: Affiliate Verification Agent (Agent 7)
+            # -----------------------------------------------------------------
+            aff_res = self.affiliate_agent.run(
+                product_keyword=job.product_keyword or custom_product_hint or "đồ gia dụng thông minh",
+                existing_link=job.affiliate_link,
+                job_id=job_id
+            )
+            job.product_keyword = aff_res["product_keyword"]
+            job.affiliate_link = aff_res["affiliate_link"]
+            db.commit()
+            self.log(
+                db,
+                job_id,
+                "Affiliate Agent",
+                f"Đã xác thực link Shopee Affiliate ({aff_res['method']} • Sub-ID: {aff_res['sub_id']}): {job.affiliate_link}"
+            )
 
             # -----------------------------------------------------------------
             # Stage 4: Dubbing Agent

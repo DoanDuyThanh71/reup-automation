@@ -111,16 +111,30 @@ def test_douyin_extract_url_from_share_text(db_session):
     assert extracted == "https://v.douyin.com/iY8AbCd/"
 
 def test_shopee_affiliate_search_and_convert(db_session):
-    shopee = ShopeeAffiliateClient(cookie="SPC_U=1", sub_id="998877")
+    shopee = ShopeeAffiliateClient(cookie="SPC_U=1", sub_id="998877", app_id="", app_secret="")
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {
         "items": [{"item_basic": {"itemid": 112233, "shopid": 4455, "name": "Quạt mini cầm tay"}}]
     }
-    with patch("requests.get", return_value=mock_resp):
+    with patch("requests.get", return_value=mock_resp), \
+         patch.object(shopee, "generate_short_link_cookie_gql", return_value=None):
         url = shopee.search_product("quạt mini")
         assert "i.4455.112233" in url
         aff_link = shopee.convert_to_affiliate_link(url)
         assert "sub_id=998877" in aff_link
+        check = shopee.verify_affiliate_link(aff_link, product_keyword="quạt mini")
+        assert check["valid"] is True
+
+def test_shopee_open_api_signature_and_affiliate_agent(db_session):
+    from app.agents.affiliate_agent import AffiliateAgent
+    sig = ShopeeAffiliateClient.build_open_api_signature("12345", "secret99", 1700000000, '{"query":"test"}')
+    assert len(sig) == 64
+
+    agent = AffiliateAgent()
+    with patch.object(agent.client, "search_product", return_value="https://shopee.vn/quat-mini-i.11.22"):
+        res = agent.run(product_keyword="quạt tích điện mini", job_id="jobtest")
+        assert res["success"] is True
+        assert "sub_id=" in res["affiliate_link"] or "s.shopee.vn" in res["affiliate_link"]
 
 # ==========================================
 # 4. Vbee & Edge-TTS Tests

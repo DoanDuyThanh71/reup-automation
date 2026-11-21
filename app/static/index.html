@@ -468,31 +468,56 @@
       <!-- Bento Row 1: Left Ingest Console (7fr) + Right Live Vbee & Pipeline Shader Card (5fr) -->
       <div class="bento-hero">
 
-        <!-- Left Card: Video Ingest + Interactive Pipeline Board Fragment -->
+        <!-- Left Card: Video Ingest (Single & Multi-Video) + Live Pipeline Board Fragment -->
         <article class="card" style="justify-content: space-between;">
           <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
-              <h3>Nạp video nguồn vào dây chuyền 6 Agent</h3>
-              <span class="ui-chip ui-chip--accent">Vbee 48kHz Default</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+              <h3>Nạp video nguồn vào dây chuyền 7 Agent</h3>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="seg" role="group" aria-label="Chế độ nạp">
+                  <button type="button" @click="isBatchMode = false" :aria-pressed="String(!isBatchMode)" style="height:26px;padding:0 10px;font-size:12px;">1 Video</button>
+                  <button type="button" @click="isBatchMode = true" :aria-pressed="String(isBatchMode)" style="height:26px;padding:0 10px;font-size:12px;">Multi-Video (3+)</button>
+                </div>
+                <span class="ui-chip ui-chip--accent">Vbee 48kHz Default</span>
+              </div>
             </div>
-            <p>Dán link Douyin, TikTok hoặc MP4. Hệ thống tự động vượt chặn tải video gốc, tách phụ đề Whisper, dịch 1:1 và ghép giọng Vbee đúng vị trí câu thoại.</p>
+            <p>Hỗ trợ dán 1 link hoặc nhiều link Douyin / TikTok / MP4 cùng lúc (mỗi dòng 1 link). Hệ thống tự động bóc tách SRT, dịch 1:1, kiểm định Shopee Affiliate (Agent 7) và ghép giọng Vbee đúng mili-giây.</p>
 
             <!-- URL Submission Form -->
-            <form @submit.prevent="submitJob()" style="margin-top: 22px; display: grid; gap: 14px;">
-              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <input
-                  type="text"
-                  x-model="newJob.source_url"
-                  required
-                  placeholder="https://www.douyin.com/jingxuan?modal_id=... hoặc https://v.douyin.com/..."
-                  class="ts-input mono"
-                  style="flex: 1; min-width: 240px;"
-                >
-                <button type="submit" :disabled="isSubmitting || !newJob.source_url.trim()" class="btn btn--primary">
-                  <span x-text="isSubmitting ? 'Đang khởi tạo...' : 'Chạy Pipeline'">Chạy Pipeline</span>
-                  <svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
-                </button>
-              </div>
+            <form @submit.prevent="isBatchMode ? submitBatchJobs() : submitJob()" style="margin-top: 18px; display: grid; gap: 14px;">
+              <template x-if="!isBatchMode">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <input
+                    type="text"
+                    x-model="newJob.source_url"
+                    required
+                    placeholder="https://www.douyin.com/jingxuan?modal_id=... hoặc https://v.douyin.com/..."
+                    class="ts-input mono"
+                    style="flex: 1; min-width: 240px;"
+                  >
+                  <button type="submit" :disabled="isSubmitting || !newJob.source_url.trim()" class="btn btn--primary">
+                    <span x-text="isSubmitting ? 'Đang khởi tạo...' : 'Chạy Pipeline'">Chạy Pipeline</span>
+                    <svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+                  </button>
+                </div>
+              </template>
+
+              <template x-if="isBatchMode">
+                <div style="display: grid; gap: 10px;">
+                  <textarea
+                    rows="3"
+                    x-model="batchUrlsText"
+                    placeholder="Dán 3 hoặc nhiều link video (mỗi dòng 1 link Douyin / TikTok / MP4)..."
+                    class="ts-textarea mono"
+                  ></textarea>
+                  <div style="display:flex;justify-content:flex-end;">
+                    <button type="submit" :disabled="isSubmitting || !batchUrlsText.trim()" class="btn btn--primary">
+                      <span x-text="isSubmitting ? 'Đang nạp hàng loạt...' : 'Chạy Multi-Video Pipeline'">Chạy Multi-Video Pipeline</span>
+                      <svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </template>
 
               <!-- Parameters Row -->
               <div class="g3" style="padding-top: 4px;">
@@ -530,23 +555,23 @@
             </form>
           </div>
 
-          <!-- Lit Shader Panel with real taste-skill Pipeline Board UI Fragment -->
+          <!-- Lit Shader Panel with real taste-skill Pipeline Board UI Fragment (Live Synced with Queue State) -->
           <div class="panel" style="--p-h: 268px; --calm-k: 0%" data-fx="gradient-mesh" data-fx-seed="47" data-fx-palette='{"bg":"#cdd6c6","surface":"#dce3d6","ink":"#262d24","muted":"#5f6a5a","accent":"#6c8e63"}' data-fx-params='{"speed":0,"calm":0.2,"calmX":0.5,"calmY":0.95,"tint":0.6,"relief":0.35}'>
             <div class="stage stage--fade-b">
               <div class="at-corner fit" style="--ax:24px;--ay:22px;--fit-max:640px">
-                <div class="ui ui-panel ui-pipe is-passed" data-ui="pipeline-board" style="width:100%;">
+                <div class="ui ui-panel ui-pipe" :class="stats.processing_jobs > 0 ? '' : 'is-passed'" data-ui="pipeline-board" data-ui-still style="width:100%;">
                   <div class="ui-pipe__head">
                     <svg class="ui-icon ui-pipe__branch" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="5" r="1.5"/><path d="M4.5 5v6M11.5 6.5c0 2.6-2.2 3.6-5.6 4.6"/></svg>
-                    <span class="ui-pipe__repo">reup-automation/pipeline</span><i class="ui-pipe__slash">/</i><code class="ui-pipe__ref">vbee-sync</code>
+                    <span class="ui-pipe__repo">reup-automation/pipeline</span><i class="ui-pipe__slash">/</i><code class="ui-pipe__ref">7-agents</code>
                     <span class="ui-spacer"></span>
-                    <span class="ui-pipe__total"><span x-text="stats.completed_jobs + ' hoàn tất'"></span></span>
-                    <span class="ui-chip ui-chip--ink ui-pipe__chip" x-text="stats.processing_jobs > 0 ? 'Đang chạy' : 'Sẵn sàng'">Sẵn sàng</span>
+                    <span class="ui-pipe__total"><span x-text="stats.completed_jobs + '/' + stats.total_jobs + ' hoàn tất'"></span></span>
+                    <span class="ui-chip ui-pipe__chip" :class="stats.processing_jobs > 0 ? 'ui-chip--accent ui-chip--live' : 'ui-chip--ink'" x-text="stats.processing_jobs > 0 ? ('Đang chạy ' + stats.processing_jobs + ' video') : 'Đã đồng bộ 100%'">Đã đồng bộ 100%</span>
                   </div>
                   <ol class="ui-pipe__steps" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px;padding:8px 12px;">
-                    <li class="ui-pipe__step is-done"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">1. Playwright Douyin HD</span></span><code class="ui-pipe__cmd">1080p MP4</code><span class="ui-pipe__time">OK</span></li>
-                    <li class="ui-pipe__step is-done"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">2. ShopAIKey Whisper ASR</span></span><code class="ui-pipe__cmd">SRT Timecode</code><span class="ui-pipe__time">OK</span></li>
-                    <li class="ui-pipe__step is-done"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">3. LLM JSON 1:1 Sub</span></span><code class="ui-pipe__cmd">Policy Filter</code><span class="ui-pipe__time">OK</span></li>
-                    <li class="ui-pipe__step is-run" style="--k:0.85"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">4. Vbee 44.1kHz PCM Sync</span></span><code class="ui-pipe__cmd">atempo fit</code><span class="ui-pipe__time">48kHz</span><span class="ui-pipe__bar"><i></i></span></li>
+                    <li class="ui-pipe__step" :class="isStageRunning(['INGESTING']) ? 'is-run' : 'is-done'" style="--k:0.5"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">1. Playwright Douyin HD</span></span><code class="ui-pipe__cmd">1080p MP4</code><span class="ui-pipe__time" x-text="isStageRunning(['INGESTING']) ? 'Đang tải' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
+                    <li class="ui-pipe__step" :class="isStageRunning(['TRANSCRIBING']) ? 'is-run' : 'is-done'" style="--k:0.6"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">2. ShopAIKey Whisper ASR</span></span><code class="ui-pipe__cmd">SRT Timecode</code><span class="ui-pipe__time" x-text="isStageRunning(['TRANSCRIBING']) ? 'Đang tách' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
+                    <li class="ui-pipe__step" :class="isStageRunning(['TRANSLATING']) ? 'is-run' : 'is-done'" style="--k:0.7"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">3. LLM 1:1 & Affiliate Agent</span></span><code class="ui-pipe__cmd">Shopee SubID</code><span class="ui-pipe__time" x-text="isStageRunning(['TRANSLATING']) ? 'Đang dịch' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
+                    <li class="ui-pipe__step" :class="isStageRunning(['DUBBING', 'RENDERING']) ? 'is-run' : 'is-done'" style="--k:0.85"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">4. Vbee 48kHz & Burn Sub</span></span><code class="ui-pipe__cmd">PCM Sync</code><span class="ui-pipe__time" x-text="isStageRunning(['DUBBING', 'RENDERING']) ? 'Đang ghép' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
                   </ol>
                 </div>
               </div>
@@ -656,6 +681,15 @@
 
                 <h3 x-text="job.title || 'Đang biên dịch tiêu đề tiếng Việt...'"></h3>
                 <p style="font-size: 14px; line-height: 21px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" x-text="job.caption || job.current_stage"></p>
+
+                <!-- Affiliate Badge & Verification Link on Card -->
+                <div x-show="job.affiliate_link" style="margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: color-mix(in oklab, var(--ink) 4%, var(--bg)); border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 11px; color: var(--muted);">Shopee Affiliate (<span x-text="job.product_keyword || 'Sản phẩm'"></span>)</div>
+                    <a :href="job.affiliate_link" target="_blank" class="mono" style="font-size: 11.5px; color: var(--accent); text-decoration: underline; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" x-text="job.affiliate_link"></a>
+                  </div>
+                  <button type="button" @click="verifyJobAffiliate(job)" class="btn btn--secondary btn--sm" style="height: 24px; padding: 0 8px; font-size: 11px;">Check Aff</button>
+                </div>
 
                 <div x-show="job.status !== 'COMPLETED'" class="progress-rail">
                   <div class="progress-fill" :style="`width: ${job.progress || 0}%`"></div>
@@ -926,20 +960,35 @@
           </div>
         </article>
 
-        <!-- 5. SHOPEE AFFILIATE, DOUYIN & TIKTOK -->
+        <!-- 5. SHOPEE AFFILIATE (AGENT 7), DOUYIN & TIKTOK -->
         <article class="card" style="grid-column: 1 / -1; gap: 16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
-              <h3>5. Shopee Affiliate, Douyin Cookie & TikTok Webhook</h3>
-              <p style="margin-top:4px;font-size:13.5px;">Playwright Stealth tự động tải video Douyin HD kể cả khi không nhập Cookie</p>
+              <h3>5. Shopee Affiliate Agent (Open API GraphQL + Cookie + Deep-Link), Douyin & TikTok</h3>
+              <p style="margin-top:4px;font-size:13.5px;">Hỗ trợ chuẩn chữ ký SHA256 Shopee Open API (<span class="mono">generateShortLink</span>), Cookie Portal hoặc Sub-ID Deep-Link</p>
             </div>
-            <button type="button" @click="testConnection('shopee')" class="btn btn--secondary btn--sm">Test Shopee</button>
+            <button type="button" @click="testConnection('shopee')" class="btn btn--secondary btn--sm">Test Shopee Affiliate</button>
           </div>
 
           <div class="g3">
             <div class="ts-field">
-              <label class="ts-label">Shopee Sub-ID <small>SHOPEE_SUB_ID</small></label>
+              <label class="ts-label">Shopee Sub-ID / Affiliate ID <small>SHOPEE_SUB_ID</small></label>
               <input type="text" x-model="configForm.SHOPEE_SUB_ID" placeholder="16550927460" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Shopee Open API App ID <small>SHOPEE_APP_ID</small></label>
+              <input type="text" x-model="configForm.SHOPEE_APP_ID" placeholder="Tùy chọn (Open API Credential)" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Shopee Open API Secret <small>SHOPEE_APP_SECRET</small></label>
+              <input type="password" x-model="configForm.SHOPEE_APP_SECRET" placeholder="Tùy chọn (Open API Secret)" class="ts-input mono">
+            </div>
+          </div>
+
+          <div class="g3">
+            <div class="ts-field">
+              <label class="ts-label">Shopee Cookie <small>SHOPEE_COOKIE</small></label>
+              <input type="password" x-model="configForm.SHOPEE_COOKIE" placeholder="SPC_U=...; _sapid=..." class="ts-input mono">
             </div>
             <div class="ts-field">
               <label class="ts-label">TikTok Webhook URL</label>
@@ -949,6 +998,47 @@
               <label class="ts-label">TikTok Session ID</label>
               <input type="password" x-model="configForm.TIKTOK_SESSION_ID" placeholder="sessionid=..." class="ts-input mono">
             </div>
+          </div>
+
+          <!-- Interactive Affiliate Link Generator & Tester Box -->
+          <div style="margin-top: 6px; padding: 16px; border-radius: 14px; background: color-mix(in oklab, var(--ink) 3.5%, var(--bg)); border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent); display: grid; gap: 12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div>
+                <div style="font-weight: 560; font-size: 14px;">Bộ kiểm thử & Tạo Link Shopee Affiliate trực tiếp (Agent 7)</div>
+                <div style="font-size: 12.5px; color: var(--muted);">Nhập tên sản phẩm (VD: <span class="mono">quạt tích điện mini</span>) hoặc link Shopee gốc để kiểm tra kết quả trả về của Affiliate Agent.</div>
+              </div>
+              <span class="ui-chip ui-chip--accent">Sub-ID: <span class="mono" x-text="configForm.SHOPEE_SUB_ID || '16550927460'"></span></span>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input
+                type="text"
+                x-model="affTestInput"
+                placeholder="Nhập từ khóa sản phẩm hoặc dán link https://shopee.vn/..."
+                class="ts-input mono"
+                style="flex:1;min-width:240px;"
+              >
+              <button type="button" @click="runAffiliateAgentTest()" :disabled="isTestingAff" class="btn btn--primary">
+                <span x-text="isTestingAff ? 'Đang tạo & kiểm tra...' : 'Tạo & Kiểm tra Link Affiliate'">Tạo & Kiểm tra Link Affiliate</span>
+              </button>
+            </div>
+
+            <template x-if="affTestResult">
+              <div style="padding: 12px; border-radius: 10px; background: var(--card); border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent); display: grid; gap: 6px; font-size: 12.5px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-weight: 600; color: var(--accent);">✓ Đã xác thực bởi Affiliate Agent (<span class="mono" x-text="affTestResult.method"></span>)</span>
+                  <span class="mono" style="color: var(--muted);" x-text="'Sub-ID: ' + affTestResult.sub_id"></span>
+                </div>
+                <div>
+                  <span style="color: var(--muted);">Link Affiliate gắn Caption/Comment: </span>
+                  <a :href="affTestResult.affiliate_link" target="_blank" class="mono" style="color: var(--ink); text-decoration: underline; word-break: break-all;" x-text="affTestResult.affiliate_link"></a>
+                </div>
+                <div>
+                  <span style="color: var(--muted);">Universal Deep-Link Redirect: </span>
+                  <a :href="affTestResult.universal_redirect_link" target="_blank" class="mono" style="color: var(--muted); text-decoration: underline; word-break: break-all;" x-text="affTestResult.universal_redirect_link"></a>
+                </div>
+              </div>
+            </template>
           </div>
         </article>
 

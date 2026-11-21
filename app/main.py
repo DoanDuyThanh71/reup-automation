@@ -10,7 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from .database import get_db, Base, engine
-from .models import JobModel, LogModel, JobCreate, JobResponse, ConfigUpdate, TestConnectionRequest, ManualPublishRequest
+from .models import (
+    JobModel, LogModel, JobCreate, BatchJobCreate, JobResponse,
+    ConfigUpdate, TestConnectionRequest, AffiliateVerifyRequest, ManualPublishRequest
+)
 from .config import config
 from .agents.orchestrator import orchestrator
 from .services.facebook_client import FacebookPublisher
@@ -100,6 +103,71 @@ def create_job(payload: JobCreate, background_tasks: BackgroundTasks, db: Sessio
     )
 
     return new_job.to_dict()
+
+@app.post("/api/jobs/batch")
+def create_batch_jobs(payload: BatchJobCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    clean_urls = [u.strip() for u in (payload.urls or []) if u and u.strip()]
+    if not clean_urls:
+        raise HTTPException(status_code=400, detail="Danh sách URL không được để trống")
+
+    created_jobs = []
+    for url in clean_urls[:10]:
+        job_id = str(uuid.uuid4())[:12]
+        new_job = JobModel(
+            id=job_id,
+            source_url=url,
+            status="PENDING",
+            current_stage="Đang chờ xử lý trong hàng đợi (Multi-Video)",
+            progress=5
+        )
+        db.add(new_job)
+        db.commit()
+        db.refresh(new_job)
+        created_jobs.append(new_job.to_dict())
+
+        background_tasks.add_task(
+            orchestrator.execute_pipeline,
+            job_id=job_id,
+            custom_product_hint=payload.custom_product_hint,
+            voice_code=payload.voice_code,
+            auto_post_fb=payload.auto_post_facebook or False,
+            auto_post_tt=payload.auto_post_tiktok or False
+        )
+
+    return {
+        "success": True,
+        "count": len(created_jobs),
+        "jobs": created_jobs
+    }
+
+@app.post("/api/affiliate/verify")
+def verify_and_generate_affiliate(payload: AffiliateVerifyRequest):
+    kw_or_url = (payload.keyword_or_url or "").strip()
+    if not kw_or_url:
+        raise HTTPException(status_code=400, detail="Vui lòng nhập từ khóa sản phẩm hoặc link Shopee")
+    if payload.sub_id:
+        orchestrator.affiliate_agent.client.sub_id = payload.sub_id.strip()
+
+    if kw_or_url.startswith("http://") or kw_or_url.startswith("https://"):
+        res = orchestrator.affiliate_agent.run(product_keyword="Sản phẩm Shopee", existing_link=kw_or_url, job_id="manual")
+    else:
+        res = orchestrator.affiliate_agent.run(product_keyword=kw_or_url, existing_link=None, job_id="manual")
+    return res
+
+@app.post("/api/jobs/{job_id}/verify-affiliate")
+def verify_job_affiliate(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(JobModel).filter(JobModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Không tìm thấy Job")
+    res = orchestrator.affiliate_agent.run(
+        product_keyword=job.product_keyword or "đồ gia dụng thông minh",
+        existing_link=job.affiliate_link,
+        job_id=job.id
+    )
+    job.product_keyword = res["product_keyword"]
+    job.affiliate_link = res["affiliate_link"]
+    db.commit()
+    return res
 
 @app.get("/api/jobs")
 def list_jobs(status: Optional[str] = None, limit: int = 50, db: Session = Depends(get_db)):
@@ -292,7 +360,12 @@ def test_connection(payload: TestConnectionRequest):
         return tts.test_connection()
 
     elif target == "shopee":
-        shopee = ShopeeAffiliateClient(cookie=params.get("cookie"), sub_id=params.get("sub_id"))
+        shopee = ShopeeAffiliateClient(
+            cookie=params.get("cookie"),
+            sub_id=params.get("sub_id"),
+            app_id=params.get("app_id"),
+            app_secret=params.get("app_secret")
+        )
         return shopee.test_connection()
 
     raise HTTPException(status_code=400, detail=f"Mục tiêu kiểm tra '{target}' không hợp lệ")

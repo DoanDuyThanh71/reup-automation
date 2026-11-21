@@ -223,6 +223,13 @@ class DouyinScraper:
 
         clean_url = self.extract_url(url)
 
+        # 0. Local file path or file:// URI support
+        local_candidate = clean_url.replace("file:///", "").replace("file://", "")
+        if os.path.exists(local_candidate) and os.path.isfile(local_candidate):
+            import shutil
+            shutil.copyfile(local_candidate, output_path)
+            return output_path
+
         # 1. Direct MP4 file link
         if any(clean_url.lower().split("?")[0].endswith(ext) for ext in (".mp4", ".mov", ".m4v")):
             self._stream_download(clean_url, output_path, self.headers)

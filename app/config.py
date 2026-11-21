@@ -50,8 +50,10 @@ DEFAULT_CONFIGS = [
 
     # E-Commerce & Scraping
     {"key": "DOUYIN_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Douyin (tùy chọn)"},
-    {"key": "SHOPEE_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Shopee để tìm kiếm và tạo link affiliate"},
-    {"key": "SHOPEE_SUB_ID", "value": "16550927460", "category": "ecommerce", "is_secret": False, "description": "Sub ID Affiliate Shopee của bạn"},
+    {"key": "SHOPEE_APP_ID", "value": "", "category": "ecommerce", "is_secret": False, "description": "Shopee Affiliate Open API App ID (SHA256 Credential)"},
+    {"key": "SHOPEE_APP_SECRET", "value": "", "category": "ecommerce", "is_secret": True, "description": "Shopee Affiliate Open API Secret Key"},
+    {"key": "SHOPEE_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Shopee Affiliate Portal (affiliate.shopee.vn)"},
+    {"key": "SHOPEE_SUB_ID", "value": "16550927460", "category": "ecommerce", "is_secret": False, "description": "Sub ID / Affiliate ID Shopee của bạn"},
 
     # Social Auto-Publishing - Facebook
     {"key": "FACEBOOK_AUTO_PUBLISH", "value": "false", "category": "social", "is_secret": False, "description": "Tự động đăng lên Facebook sau khi render xong (true/false)"},

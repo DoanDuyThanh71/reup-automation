@@ -11,11 +11,17 @@ function reupApp() {
     latestCompletedJobId: '',
     vbeeCurrentTime: '48kHz PCM',
     vbeeCurrentCaption: '',
+    isBatchMode: false,
+    batchUrlsText: '',
+    affTestInput: 'quạt tích điện cầm tay mini',
+    affTestResult: null,
+    isTestingAff: false,
 
     stats: {
       total_jobs: 0,
       completed_jobs: 0,
       failed_jobs: 0,
+      processing_jobs: 0,
       facebook_published: 0,
       tiktok_published: 0
     },
@@ -57,8 +63,10 @@ function reupApp() {
       VBEE_VOICE_CODE: 'hn_female_ngochuyen_full_48k-fhg',
       EDGE_TTS_VOICE: 'vi-VN-HoaiMyNeural',
       DOUYIN_COOKIE: '',
+      SHOPEE_APP_ID: '',
+      SHOPEE_APP_SECRET: '',
       SHOPEE_COOKIE: '',
-      SHOPEE_SUB_ID: '',
+      SHOPEE_SUB_ID: '16550927460',
       FACEBOOK_AUTO_PUBLISH: 'false',
       FACEBOOK_PAGE_ID: '',
       FACEBOOK_PAGE_ACCESS_TOKEN: '',
@@ -94,6 +102,11 @@ function reupApp() {
           window.lucide.createIcons();
         }
       });
+    },
+
+    isStageRunning(stages) {
+      if (!this.jobs || this.jobs.length === 0) return false;
+      return this.jobs.some(j => stages.includes(j.status));
     },
 
     parseSrtContent(raw) {
@@ -326,6 +339,104 @@ function reupApp() {
       }
     },
 
+    async submitBatchJobs() {
+      const urls = (this.batchUrlsText || '')
+        .split(/\r?\n/)
+        .map(u => u.trim())
+        .filter(Boolean);
+      if (urls.length === 0) return;
+
+      this.isSubmitting = true;
+      try {
+        const res = await fetch('/api/jobs/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            urls: urls,
+            custom_product_hint: this.newJob.custom_product_hint,
+            voice_code: this.newJob.voice_code,
+            auto_post_facebook: this.newJob.auto_post_facebook,
+            auto_post_tiktok: this.newJob.auto_post_tiktok
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          Swal.fire({
+            icon: 'success',
+            title: `Đã nạp ${data.count} video vào hàng đợi!`,
+            text: 'Hệ thống đang xử lý đồng thời và đồng bộ trạng thái thời gian thực.',
+            timer: 2200,
+            showConfirmButton: false,
+            background: '#0f172a',
+            color: '#fff'
+          });
+          this.batchUrlsText = '';
+          await this.fetchJobs();
+          await this.fetchStats();
+        } else {
+          const err = await res.json();
+          Swal.fire({
+            icon: 'error',
+            title: 'Lỗi nạp batch',
+            text: err.detail || 'Không thể nạp danh sách video',
+            background: '#0f172a',
+            color: '#fff'
+          });
+        }
+      } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+
+    async runAffiliateAgentTest() {
+      if (!this.affTestInput.trim()) return;
+      this.isTestingAff = true;
+      try {
+        const res = await fetch('/api/affiliate/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            keyword_or_url: this.affTestInput.trim(),
+            sub_id: this.configForm.SHOPEE_SUB_ID || '16550927460'
+          })
+        });
+        if (res.ok) {
+          this.affTestResult = await res.json();
+        }
+      } catch (e) {
+        console.error('Lỗi test affiliate:', e);
+      } finally {
+        this.isTestingAff = false;
+      }
+    },
+
+    async verifyJobAffiliate(job) {
+      if (!job || !job.id) return;
+      try {
+        const res = await fetch(`/api/jobs/${job.id}/verify-affiliate`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          await this.fetchJobs(false);
+          Swal.fire({
+            icon: 'success',
+            title: 'Affiliate Agent đã kiểm tra!',
+            html: `<div style="text-align:left;font-size:12.5px;line-height:1.6;">
+              <div><b>Sản phẩm:</b> ${data.product_keyword}</div>
+              <div><b>Phương thức:</b> <code>${data.method}</code> (Sub-ID: <code>${data.sub_id}</code>)</div>
+              <div style="margin-top:6px;"><b>Link Affiliate:</b><br><a href="${data.affiliate_link}" target="_blank" style="color:#dafa9c;word-break:break-all;">${data.affiliate_link}</a></div>
+            </div>`,
+            background: '#0f172a',
+            color: '#fff'
+          });
+        }
+      } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Lỗi kiểm tra Affiliate', text: e.message, background: '#0f172a', color: '#fff' });
+      }
+    },
+
     async deleteJob(jobId) {
       const confirm = await Swal.fire({
         title: 'Xóa video này?',
@@ -414,7 +525,12 @@ function reupApp() {
           cookie: this.configForm.VBEE_REFRESH_TOKEN_COOKIE
         };
       } else if (target === 'shopee') {
-        params = { cookie: this.configForm.SHOPEE_COOKIE, sub_id: this.configForm.SHOPEE_SUB_ID };
+        params = {
+          cookie: this.configForm.SHOPEE_COOKIE,
+          sub_id: this.configForm.SHOPEE_SUB_ID,
+          app_id: this.configForm.SHOPEE_APP_ID,
+          app_secret: this.configForm.SHOPEE_APP_SECRET
+        };
       }
 
       try {

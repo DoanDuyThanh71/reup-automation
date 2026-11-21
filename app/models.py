@@ -141,6 +141,19 @@ class TestConnectionRequest(BaseModel):
     custom_params: Optional[Dict[str, str]] = None
 
 
+class BatchJobCreate(BaseModel):
+    urls: List[str] = Field(..., description="Danh sách nhiều URL video để xử lý đồng loạt")
+    custom_product_hint: Optional[str] = None
+    voice_code: Optional[str] = None
+    auto_post_facebook: Optional[bool] = False
+    auto_post_tiktok: Optional[bool] = False
+
+
+class AffiliateVerifyRequest(BaseModel):
+    keyword_or_url: str = Field(..., description="Từ khóa sản phẩm hoặc link Shopee gốc cần tạo & kiểm tra link Affiliate")
+    sub_id: Optional[str] = None
+
+
 class ManualPublishRequest(BaseModel):
     job_id: str
     platform: str = Field(..., description="facebook hoặc tiktok")
