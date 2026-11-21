@@ -7,6 +7,10 @@ function reupApp() {
     showPublishModal: false,
     showPreviewModal: false,
     videoCacheBust: Date.now(),
+    isPlayingVbee: false,
+    latestCompletedJobId: '',
+    vbeeCurrentTime: '48kHz PCM',
+    vbeeCurrentCaption: '',
 
     stats: {
       total_jobs: 0,
@@ -185,10 +189,80 @@ function reupApp() {
         const res = await fetch('/api/jobs');
         if (res.ok) {
           this.jobs = await res.json();
+          const completed = this.jobs.find(j => j.status === 'COMPLETED');
+          if (completed && completed.id !== this.latestCompletedJobId) {
+            this.latestCompletedJobId = completed.id;
+            this.loadLatestVbeeSrt(completed.id);
+          }
           if (refreshUi) this.refreshIcons();
         }
       } catch (e) {
         console.error('Lỗi tải danh sách job:', e);
+      }
+    },
+
+    srtTimeToSeconds(tStr) {
+      if (!tStr) return 0;
+      const parts = tStr.trim().replace(',', '.').split(':');
+      if (parts.length !== 3) return 0;
+      return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+    },
+
+    async loadLatestVbeeSrt(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/srt?t=${Date.now()}`);
+        if (res.ok) {
+          const text = await res.text();
+          this.vbeeCues = this.parseSrtContent(text).map(c => {
+            const [s, e] = c.time.split('-->');
+            return {
+              ...c,
+              startSec: this.srtTimeToSeconds(s),
+              endSec: this.srtTimeToSeconds(e)
+            };
+          });
+          if (this.vbeeCues.length > 0 && !this.vbeeCurrentCaption) {
+            this.vbeeCurrentCaption = `"${this.vbeeCues[0].text}"`;
+          }
+        }
+      } catch (e) {}
+    },
+
+    toggleVbeeAudioPreview() {
+      const player = this.$refs.vbeeAudioPlayer;
+      if (!player) return;
+
+      const targetJobId = this.latestCompletedJobId || (this.jobs.find(j => j.status === 'COMPLETED') || {}).id;
+      if (!targetJobId) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Chưa có file âm thanh',
+          text: 'Hãy chạy ít nhất 1 video hoàn chỉnh để nghe bản thu Vbee.'
+        });
+        return;
+      }
+
+      const expectedSrc = `/api/jobs/${targetJobId}/audio`;
+      if (!player.src || !player.src.includes(expectedSrc)) {
+        player.src = `${expectedSrc}?t=${Date.now()}`;
+        player.ontimeupdate = () => {
+          const cur = player.currentTime || 0;
+          const mins = String(Math.floor(cur / 60)).padStart(2, '0');
+          const secs = String(Math.floor(cur % 60)).padStart(2, '0');
+          this.vbeeCurrentTime = `${mins}:${secs}`;
+          if (this.vbeeCues && this.vbeeCues.length > 0) {
+            const active = this.vbeeCues.find(c => cur >= c.startSec && cur <= c.endSec + 0.4);
+            if (active) {
+              this.vbeeCurrentCaption = `"${active.text}"`;
+            }
+          }
+        };
+      }
+
+      if (player.paused) {
+        player.play().catch(err => console.error('Audio play error:', err));
+      } else {
+        player.pause();
       }
     },
 

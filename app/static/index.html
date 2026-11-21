@@ -554,29 +554,44 @@
           </div>
         </article>
 
-        <!-- Right Card: Vbee Studio Orb & Live System Telemetry -->
+        <!-- Right Card: Vbee Studio Orb & Live Audio Player -->
         <article class="card">
-          <h3>Đồng bộ âm thanh Vbee theo mẫu PCM</h3>
-          <p>Mỗi câu phụ đề được tổng hợp độc lập qua Vbee API (<span class="mono">63a47dd0...a9bf</span>), cắt khoảng lặng và đặt đúng vị trí mili-giây trên trục thời gian gốc.</p>
-          <div class="panel" style="--p-h: 376px; --calm-k: 0%" data-fx="painterly-landscape" data-fx-seed="8" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"calm":0.2,"calmX":0.5,"calmY":0.85,"drift":0,"side":1}'>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <h3>Nghe thử giọng Vbee & Đồng bộ PCM</h3>
+            <button
+              type="button"
+              @click="toggleVbeeAudioPreview()"
+              class="btn btn--primary btn--sm"
+              style="height: 28px; padding: 0 12px; font-size: 12px;"
+            >
+              <span x-text="isPlayingVbee ? '⏸ Dừng nghe' : '▶ Phát giọng Vbee'">▶ Phát giọng Vbee</span>
+            </button>
+          </div>
+          <p>Bấm vào quả cầu hoặc nút <b>Phát giọng Vbee</b> để nghe trực tiếp file âm thanh lồng tiếng (<span class="mono" x-text="latestCompletedJobId ? ('#' + latestCompletedJobId) : 'Vbee 48kHz'"></span>) đã đồng bộ theo mốc SRT.</p>
+          <audio x-ref="vbeeAudioPlayer" @ended="isPlayingVbee = false" @pause="isPlayingVbee = false" @play="isPlayingVbee = true" preload="none"></audio>
+
+          <div class="panel" style="--p-h: 376px; --calm-k: 0%; cursor: pointer;" @click="toggleVbeeAudioPreview()" title="Bấm để Phát / Dừng âm thanh Vbee" data-fx="painterly-landscape" data-fx-seed="8" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"calm":0.2,"calmX":0.5,"calmY":0.85,"drift":0,"side":1}'>
             <div class="stage stage--fade-b" style="--fade-h:36px">
               <div class="at-rise fit to-edge" style="--ax:max(24px, 50% - 142px);--ay:24px;--fit-max:284px">
-                <div class="ui ui-panel ui-voice is-talking" data-ui="voice" style="width:100%;">
+                <div class="ui ui-panel ui-voice" :class="isPlayingVbee ? 'is-talking' : ''" data-ui="voice" style="width:100%;">
                   <div class="ui-voice__top">
-                    <span class="ui-chip ui-chip--ink">Vbee TTS v1</span>
+                    <span class="ui-chip" :class="isPlayingVbee ? 'ui-chip--accent' : 'ui-chip--ink'" x-text="isPlayingVbee ? 'Đang phát Vbee' : 'Bấm để nghe'">Bấm để nghe</span>
                     <span class="ui-spacer"></span>
-                    <span class="ui-voice__time">48kHz PCM</span>
+                    <span class="ui-voice__time" x-text="vbeeCurrentTime || '48kHz PCM'">48kHz PCM</span>
                   </div>
                   <div class="ui-voice__orb" data-voice-orb></div>
                   <div class="ui-voice__who">
-                    <span class="ui-voice__name">Ngọc Huyền (HN)</span>
+                    <span class="ui-voice__name">Ngọc Huyền (HN 48kHz)</span>
                     <span class="ui-voice__with" x-text="configForm.VBEE_VOICE_CODE || 'hn_female_ngochuyen_full_48k-fhg'"></span>
                   </div>
-                  <div class="ui-voice__cap">"Cậu làm gì vậy? Ba nghìn mét phá kỷ lục mà nhịp tim vẫn ổn định thế này?"</div>
+                  <div class="ui-voice__cap" x-text="vbeeCurrentCaption || 'Bấm vào thẻ này để nghe bản thu Vbee thực tế của video vừa xử lý.'"></div>
                   <div class="ui-voice__bar">
                     <span class="ui-voice__btn" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="8" rx="2"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5V14"/></svg></span>
                     <span class="ui-voice__wave" aria-hidden="true"><i style="--h:5"></i><i style="--h:9"></i><i style="--h:14"></i><i style="--h:10"></i><i style="--h:18"></i><i style="--h:12"></i><i style="--h:20"></i><i style="--h:15"></i><i style="--h:9"></i><i style="--h:17"></i><i style="--h:13"></i><i style="--h:7"></i><i style="--h:12"></i><i style="--h:19"></i><i style="--h:14"></i><i style="--h:8"></i><i style="--h:15"></i><i style="--h:10"></i><i style="--h:6"></i><i style="--h:11"></i></span>
-                    <span class="ui-voice__btn ui-voice__end" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span>
+                    <span class="ui-voice__btn ui-voice__end" aria-hidden="true">
+                      <svg x-show="!isPlayingVbee" class="ui-icon" viewBox="0 0 16 16"><path d="M5 3.5l8 4.5-8 4.5z" fill="currentColor"/></svg>
+                      <svg x-show="isPlayingVbee" class="ui-icon" viewBox="0 0 16 16"><path d="M5 4h2v8H5zm4 0h2v8H9z" fill="currentColor"/></svg>
+                    </span>
                   </div>
                 </div>
               </div>

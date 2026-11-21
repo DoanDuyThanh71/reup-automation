@@ -169,6 +169,13 @@ def get_job_srt(job_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="File phụ đề chưa sẵn sàng")
     return FileResponse(job.srt_translated_path, media_type="text/plain", filename=f"sub_{job_id}.srt")
 
+@app.get("/api/jobs/{job_id}/audio")
+def get_job_audio(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(JobModel).filter(JobModel.id == job_id).first()
+    if not job or not job.dubbed_audio_path or not os.path.exists(job.dubbed_audio_path):
+        raise HTTPException(status_code=404, detail="File âm thanh lồng tiếng Vbee chưa sẵn sàng")
+    return FileResponse(job.dubbed_audio_path, media_type="audio/mpeg", filename=f"vbee_{job_id}.mp3")
+
 @app.post("/api/jobs/{job_id}/publish")
 def manual_publish(job_id: str, payload: ManualPublishRequest, db: Session = Depends(get_db)):
     job = db.query(JobModel).filter(JobModel.id == job_id).first()
