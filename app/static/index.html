@@ -109,6 +109,16 @@
       --calm: var(--g-bg);
     }
 
+    /* Standalone .ui fragments outside .stage also inherit the theme surface and ink */
+    .ui {
+      --fx-bg: var(--frag);
+      --fx-surface: var(--card);
+      --fx-ink: var(--ink);
+      --fx-muted: var(--muted);
+      --fx-accent: var(--accent);
+      --fx-accent-ink: var(--accent-ink);
+    }
+
     /* Top bar from taste-skill cards.html */
     .top {
       position: sticky;
