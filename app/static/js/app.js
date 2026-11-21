@@ -3,14 +3,15 @@ function reupApp() {
     activeTab: 'dashboard',
     isSubmitting: false,
     isPublishing: false,
+    showAdvanced: false,
     showPublishModal: false,
+    showPreviewModal: false,
     videoCacheBust: Date.now(),
 
     stats: {
       total_jobs: 0,
       completed_jobs: 0,
       failed_jobs: 0,
-      processing_jobs: 0,
       facebook_published: 0,
       tiktok_published: 0
     },
@@ -71,9 +72,10 @@ function reupApp() {
       await this.fetchConfigs();
       await this.fetchLogs();
       this.connectWebSocket();
+      this.refreshIcons();
 
       setInterval(async () => {
-        if (this.activeTab === 'dashboard') {
+        if (this.activeTab === 'dashboard' || this.activeTab === 'jobs') {
           await this.fetchJobs(false);
           await this.fetchStats();
         } else if (this.activeTab === 'logs') {
@@ -82,21 +84,12 @@ function reupApp() {
       }, 4000);
     },
 
-    statusSymbol(status) {
-      if (status === 'COMPLETED') return '●';
-      if (status === 'FAILED') return '✕';
-      if (status === 'PENDING') return '○';
-      return '◆';
-    },
-
-    formatTime(iso) {
-      if (!iso) return '';
-      try {
-        const d = new Date(iso);
-        return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      } catch (e) {
-        return '';
-      }
+    refreshIcons() {
+      this.$nextTick(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
     },
 
     parseSrtContent(raw) {
@@ -108,11 +101,10 @@ function reupApp() {
         if (lines.length >= 2) {
           const timeIdx = lines.findIndex(l => l.includes('-->'));
           if (timeIdx !== -1) {
-            const timeLine = lines[timeIdx].replace(/,000/g, '').replace(/,\d+/g, '');
             const text = lines.slice(timeIdx + 1).join(' ');
             cues.push({
               index: cues.length + 1,
-              time: timeLine,
+              time: lines[timeIdx],
               text: text
             });
           }
@@ -121,10 +113,12 @@ function reupApp() {
       return cues;
     },
 
-    async selectJob(job) {
+    async openPreviewModal(job) {
       this.selectedJob = job;
       this.videoCacheBust = Date.now();
       this.srtCues = [];
+      this.showPreviewModal = true;
+      this.refreshIcons();
       if (job && job.id) {
         try {
           const res = await fetch(`/api/jobs/${job.id}/srt?t=${Date.now()}`);
@@ -186,24 +180,12 @@ function reupApp() {
       }
     },
 
-    async fetchJobs(autoSelectFirst = true) {
+    async fetchJobs(refreshUi = true) {
       try {
         const res = await fetch('/api/jobs');
         if (res.ok) {
           this.jobs = await res.json();
-          if (this.selectedJob) {
-            const updated = this.jobs.find(j => j.id === this.selectedJob.id);
-            if (updated) {
-              const prevStatus = this.selectedJob.status;
-              this.selectedJob = updated;
-              if (prevStatus !== 'COMPLETED' && updated.status === 'COMPLETED') {
-                await this.selectJob(updated);
-              }
-            }
-          } else if (autoSelectFirst && this.jobs.length > 0) {
-            const firstCompleted = this.jobs.find(j => j.status === 'COMPLETED') || this.jobs[0];
-            await this.selectJob(firstCompleted);
-          }
+          if (refreshUi) this.refreshIcons();
         }
       } catch (e) {
         console.error('Lỗi tải danh sách job:', e);
@@ -239,36 +221,49 @@ function reupApp() {
 
         if (res.ok) {
           const job = await res.json();
+          Swal.fire({
+            icon: 'success',
+            title: 'Đã đưa vào hàng đợi!',
+            text: `Mã tiến trình: #${job.id}`,
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#0f172a',
+            color: '#fff'
+          });
           this.newJob.source_url = '';
           this.newJob.custom_product_hint = '';
-          await this.fetchJobs(false);
-          await this.selectJob(job);
+          await this.fetchJobs();
           await this.fetchStats();
         } else {
           const err = await res.json();
           Swal.fire({
             icon: 'error',
-            title: 'Không thể tạo tiến trình',
-            text: err.detail || 'Vui lòng kiểm tra lại đường dẫn video'
+            title: 'Lỗi tạo job',
+            text: err.detail || 'Không thể gửi yêu cầu',
+            background: '#0f172a',
+            color: '#fff'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
       } finally {
         this.isSubmitting = false;
+        this.refreshIcons();
       }
     },
 
     async deleteJob(jobId) {
       const confirm = await Swal.fire({
-        title: `Xóa tiến trình #${jobId}?`,
-        text: 'Bản ghi tiến trình sẽ bị xóa khỏi danh sách.',
+        title: 'Xóa video này?',
+        text: 'Dữ liệu và file video sẽ bị xóa vĩnh viễn',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#a82020',
-        cancelButtonColor: '#6e7b82',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy',
+        background: '#0f172a',
+        color: '#fff'
       });
 
       if (!confirm.isConfirmed) return;
@@ -276,10 +271,6 @@ function reupApp() {
       try {
         const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
         if (res.ok) {
-          if (this.selectedJob && this.selectedJob.id === jobId) {
-            this.selectedJob = null;
-            this.srtCues = [];
-          }
           await this.fetchJobs();
           await this.fetchStats();
         }
@@ -299,24 +290,28 @@ function reupApp() {
         if (res.ok) {
           Swal.fire({
             icon: 'success',
-            title: 'Đã lưu cấu hình',
-            text: 'Thông số Vbee, AI và Facebook đã được cập nhật vào cơ sở dữ liệu.',
-            timer: 1800,
-            showConfirmButton: false
+            title: 'Đã lưu cấu hình!',
+            text: 'Mọi token và endpoint đã được cập nhật trực tiếp vào cơ sở dữ liệu.',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#0f172a',
+            color: '#fff'
           });
         } else {
-          Swal.fire({ icon: 'error', title: 'Lỗi lưu', text: 'Không thể lưu cài đặt' });
+          Swal.fire({ icon: 'error', title: 'Lỗi lưu', text: 'Không thể lưu cài đặt', background: '#0f172a', color: '#fff' });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
       }
     },
 
     async testConnection(target) {
       Swal.fire({
-        title: `Đang kiểm tra ${target.toUpperCase()}...`,
+        title: `Đang kiểm tra kết nối ${target.toUpperCase()}...`,
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
+        background: '#0f172a',
+        color: '#fff'
       });
 
       let params = {};
@@ -345,10 +340,7 @@ function reupApp() {
           cookie: this.configForm.VBEE_REFRESH_TOKEN_COOKIE
         };
       } else if (target === 'shopee') {
-        params = {
-          cookie: this.configForm.SHOPEE_COOKIE,
-          sub_id: this.configForm.SHOPEE_SUB_ID
-        };
+        params = { cookie: this.configForm.SHOPEE_COOKIE, sub_id: this.configForm.SHOPEE_SUB_ID };
       }
 
       try {
@@ -360,24 +352,28 @@ function reupApp() {
 
         const data = await res.json();
         if (data.success) {
-          let detail = data.message || 'Kết nối hợp lệ!';
+          let detail = data.message || 'Kết nối thành công!';
           if (data.page_name) {
             detail += `\nFanpage: ${data.page_name} (ID: ${data.page_id})`;
           }
           Swal.fire({
             icon: 'success',
-            title: 'Kết nối hoạt động tốt',
-            text: detail
+            title: 'Kết nối thành công!',
+            text: detail,
+            background: '#0f172a',
+            color: '#fff'
           });
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Kết nối thất bại',
-            text: data.error || 'Vui lòng kiểm tra lại token hoặc quyền truy cập'
+            text: data.error || 'Vui lòng kiểm tra lại token hoặc quyền hạn',
+            background: '#0f172a',
+            color: '#fff'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message });
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message, background: '#0f172a', color: '#fff' });
       }
     },
 
@@ -389,6 +385,7 @@ function reupApp() {
       this.publishForm.platform = 'facebook';
       this.publishForm.publish_mode = this.configForm.FACEBOOK_PUBLISH_MODE || 'reel';
       this.showPublishModal = true;
+      this.refreshIcons();
     },
 
     async submitManualPublish() {
@@ -404,21 +401,25 @@ function reupApp() {
         if (res.ok && data.success) {
           Swal.fire({
             icon: 'success',
-            title: 'Đã xuất bản thành công',
-            text: data.message || `Đã đăng video #${this.publishForm.job_id}`
+            title: 'Đã xuất bản thành công!',
+            text: data.message || `Đã đăng video #${this.publishForm.job_id}`,
+            background: '#0f172a',
+            color: '#fff'
           });
           this.showPublishModal = false;
-          await this.fetchJobs(false);
+          await this.fetchJobs();
           await this.fetchStats();
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Lỗi xuất bản',
-            text: data.detail || data.error || 'Không thể đăng video'
+            text: data.detail || data.error || 'Không thể đăng video',
+            background: '#0f172a',
+            color: '#fff'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
       } finally {
         this.isPublishing = false;
       }
