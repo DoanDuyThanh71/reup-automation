@@ -61,7 +61,20 @@ class TranscribeAgent:
         )
 
     def run(self, video_path: str, output_audio_path: str, output_srt_path: str) -> Dict[str, Any]:
-        self.extract_audio(video_path, output_audio_path)
+        if not (os.path.exists(output_audio_path) and os.path.getsize(output_audio_path) > 1000):
+            self.extract_audio(video_path, output_audio_path)
+
+        if os.path.exists(output_srt_path) and os.path.getsize(output_srt_path) > 50:
+            with open(output_srt_path, "r", encoding="utf-8") as f:
+                existing_srt = f.read()
+            if "-->" in existing_srt and "全场欢呼" not in existing_srt:
+                return {
+                    "success": True,
+                    "audio_path": output_audio_path,
+                    "srt_path": output_srt_path,
+                    "raw_srt": existing_srt
+                }
+
         raw_srt = self.transcribe_to_srt(output_audio_path)
 
         os.makedirs(os.path.dirname(output_srt_path), exist_ok=True)

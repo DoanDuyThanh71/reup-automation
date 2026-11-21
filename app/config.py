@@ -25,9 +25,12 @@ def get_ffmpeg_exe() -> str:
     except Exception:
         return "ffmpeg"
 
+DEFAULT_VBEE_APP_ID = "63a47dd0-f273-4b4a-a9bf-ae354f38b554"
+DEFAULT_VBEE_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3Nzg3NDA4MDN9.vSKa74Mutjtk6lGpEg2iuCItXZUrn9W9EBymYflEuXo"
+
 DEFAULT_CONFIGS = [
     # AI Content & Translation
-    {"key": "AI_BASE_URL", "value": "https://9router.n8n71.com/v1", "category": "ai", "is_secret": False, "description": "Endpoint API AI (9Router, OpenAI, Groq, DeepSeek...)"},
+    {"key": "AI_BASE_URL", "value": "https://9router.n8n71.com/v1", "category": "ai", "is_secret": False, "description": "Endpoint API AI (9Router, ShopAIKey, OpenAI, Groq, DeepSeek...)"},
     {"key": "AI_API_KEY", "value": "", "category": "ai", "is_secret": True, "description": "API Key của mô hình AI"},
     {"key": "AI_MODEL", "value": "AiFF", "category": "ai", "is_secret": False, "description": "Model Name (AiFF, gpt-4o-mini, gemini-1.5-flash...)"},
 
@@ -37,14 +40,16 @@ DEFAULT_CONFIGS = [
     {"key": "ASR_BASE_URL", "value": "https://api.shopaikey.com/v1", "category": "asr", "is_secret": False, "description": "Base URL của ASR Service"},
     {"key": "ASR_MODEL", "value": "whisper-1", "category": "asr", "is_secret": False, "description": "Model Whisper"},
 
-    # Voice Dubbing (TTS)
-    {"key": "TTS_PROVIDER", "value": "vbee", "category": "tts", "is_secret": False, "description": "Dịch vụ đọc lồng tiếng: vbee hoặc edge-tts (miễn phí)"},
-    {"key": "VBEE_REFRESH_TOKEN_COOKIE", "value": "", "category": "tts", "is_secret": True, "description": "Cookie chuỗi refresh_token từ studio.vbee.vn"},
-    {"key": "VBEE_VOICE_CODE", "value": "vi_female_hn_ngoc_huyen", "category": "tts", "is_secret": False, "description": "Mã giọng đọc Vbee (hn_ngoc_huyen, hn_manhdung...)"},
-    {"key": "EDGE_TTS_VOICE", "value": "vi-VN-HoaiMyNeural", "category": "tts", "is_secret": False, "description": "Giọng đọc Edge-TTS (vi-VN-HoaiMyNeural, vi-VN-NamMinhNeural)"},
+    # Voice Dubbing (TTS) - Vbee Default
+    {"key": "TTS_PROVIDER", "value": "vbee", "category": "tts", "is_secret": False, "description": "Dịch vụ đọc lồng tiếng: vbee (mặc định) hoặc edge-tts"},
+    {"key": "VBEE_APP_ID", "value": DEFAULT_VBEE_APP_ID, "category": "tts", "is_secret": False, "description": "Vbee App ID (Mặc định: 63a47dd0-f273-4b4a-a9bf-ae354f38b554)"},
+    {"key": "VBEE_ACCESS_TOKEN", "value": DEFAULT_VBEE_TOKEN, "category": "tts", "is_secret": True, "description": "Vbee Bearer Access Token (API v1/tts)"},
+    {"key": "VBEE_REFRESH_TOKEN_COOKIE", "value": "", "category": "tts", "is_secret": True, "description": "Cookie chuỗi refresh_token từ studio.vbee.vn (tùy chọn)"},
+    {"key": "VBEE_VOICE_CODE", "value": "hn_female_ngochuyen_full_48k-fhg", "category": "tts", "is_secret": False, "description": "Mã giọng đọc Vbee (hn_female_ngochuyen_full_48k-fhg, hn_male_manhdung_news_48k-fhg...)"},
+    {"key": "EDGE_TTS_VOICE", "value": "vi-VN-HoaiMyNeural", "category": "tts", "is_secret": False, "description": "Giọng đọc Edge-TTS dự phòng (vi-VN-HoaiMyNeural, vi-VN-NamMinhNeural)"},
 
     # E-Commerce & Scraping
-    {"key": "DOUYIN_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Douyin để cào video chất lượng cao không watermark"},
+    {"key": "DOUYIN_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Douyin (tùy chọn)"},
     {"key": "SHOPEE_COOKIE", "value": "", "category": "ecommerce", "is_secret": True, "description": "Cookie Shopee để tìm kiếm và tạo link affiliate"},
     {"key": "SHOPEE_SUB_ID", "value": "16550927460", "category": "ecommerce", "is_secret": False, "description": "Sub ID Affiliate Shopee của bạn"},
 
@@ -80,6 +85,8 @@ class ConfigManager:
                         description=item["description"]
                     )
                     db.add(config_entry)
+                elif item["key"] in ("VBEE_APP_ID", "VBEE_ACCESS_TOKEN") and not (existing.value or "").strip():
+                    existing.value = item["value"]
             db.commit()
         except Exception as e:
             db.rollback()
@@ -91,9 +98,9 @@ class ConfigManager:
         db: Session = SessionLocal()
         try:
             item = db.query(ConfigModel).filter(ConfigModel.key == key).first()
-            if item and item.value is not None:
+            if item and item.value is not None and item.value != "":
                 return item.value
-            return os.getenv(key, default or "")
+            return os.getenv(key, default if default is not None else "")
         finally:
             db.close()
 

@@ -3,18 +3,21 @@ function reupApp() {
     activeTab: 'dashboard',
     isSubmitting: false,
     isPublishing: false,
-    showAdvanced: false,
     showPublishModal: false,
+    videoCacheBust: Date.now(),
 
     stats: {
       total_jobs: 0,
       completed_jobs: 0,
       failed_jobs: 0,
+      processing_jobs: 0,
       facebook_published: 0,
       tiktok_published: 0
     },
 
     jobs: [],
+    selectedJob: null,
+    srtCues: [],
     liveLogs: [],
 
     newJob: {
@@ -35,16 +38,18 @@ function reupApp() {
     },
 
     configForm: {
-      AI_BASE_URL: '',
+      AI_BASE_URL: 'https://api.shopaikey.com/v1',
       AI_API_KEY: '',
-      AI_MODEL: '',
+      AI_MODEL: 'gpt-4o-mini',
       ASR_PROVIDER: 'shopaikey',
       ASR_API_KEY: '',
       ASR_BASE_URL: 'https://api.shopaikey.com/v1',
       ASR_MODEL: 'whisper-1',
       TTS_PROVIDER: 'vbee',
+      VBEE_APP_ID: '63a47dd0-f273-4b4a-a9bf-ae354f38b554',
+      VBEE_ACCESS_TOKEN: '',
       VBEE_REFRESH_TOKEN_COOKIE: '',
-      VBEE_VOICE_CODE: 'vi_female_hn_ngoc_huyen',
+      VBEE_VOICE_CODE: 'hn_female_ngochuyen_full_48k-fhg',
       EDGE_TTS_VOICE: 'vi-VN-HoaiMyNeural',
       DOUYIN_COOKIE: '',
       SHOPEE_COOKIE: '',
@@ -66,17 +71,71 @@ function reupApp() {
       await this.fetchConfigs();
       await this.fetchLogs();
       this.connectWebSocket();
-      this.refreshIcons();
 
-      // Polling loop for active jobs and stats
       setInterval(async () => {
-        if (this.activeTab === 'dashboard' || this.activeTab === 'jobs') {
+        if (this.activeTab === 'dashboard') {
           await this.fetchJobs(false);
           await this.fetchStats();
         } else if (this.activeTab === 'logs') {
           await this.fetchLogs();
         }
       }, 4000);
+    },
+
+    statusSymbol(status) {
+      if (status === 'COMPLETED') return '●';
+      if (status === 'FAILED') return '✕';
+      if (status === 'PENDING') return '○';
+      return '◆';
+    },
+
+    formatTime(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    },
+
+    parseSrtContent(raw) {
+      if (!raw) return [];
+      const blocks = raw.trim().replace(/\r\n/g, '\n').split(/\n\s*\n/);
+      const cues = [];
+      for (const b of blocks) {
+        const lines = b.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length >= 2) {
+          const timeIdx = lines.findIndex(l => l.includes('-->'));
+          if (timeIdx !== -1) {
+            const timeLine = lines[timeIdx].replace(/,000/g, '').replace(/,\d+/g, '');
+            const text = lines.slice(timeIdx + 1).join(' ');
+            cues.push({
+              index: cues.length + 1,
+              time: timeLine,
+              text: text
+            });
+          }
+        }
+      }
+      return cues;
+    },
+
+    async selectJob(job) {
+      this.selectedJob = job;
+      this.videoCacheBust = Date.now();
+      this.srtCues = [];
+      if (job && job.id) {
+        try {
+          const res = await fetch(`/api/jobs/${job.id}/srt?t=${Date.now()}`);
+          if (res.ok) {
+            const text = await res.text();
+            this.srtCues = this.parseSrtContent(text);
+          }
+        } catch (e) {
+          console.warn('Chưa tải được file SRT:', e);
+        }
+      }
     },
 
     async fetchLogs() {
@@ -116,14 +175,6 @@ function reupApp() {
       }
     },
 
-    refreshIcons() {
-      this.$nextTick(() => {
-        if (window.lucide) {
-          window.lucide.createIcons();
-        }
-      });
-    },
-
     async fetchStats() {
       try {
         const res = await fetch('/api/stats');
@@ -135,12 +186,24 @@ function reupApp() {
       }
     },
 
-    async fetchJobs(refreshUi = true) {
+    async fetchJobs(autoSelectFirst = true) {
       try {
         const res = await fetch('/api/jobs');
         if (res.ok) {
           this.jobs = await res.json();
-          if (refreshUi) this.refreshIcons();
+          if (this.selectedJob) {
+            const updated = this.jobs.find(j => j.id === this.selectedJob.id);
+            if (updated) {
+              const prevStatus = this.selectedJob.status;
+              this.selectedJob = updated;
+              if (prevStatus !== 'COMPLETED' && updated.status === 'COMPLETED') {
+                await this.selectJob(updated);
+              }
+            }
+          } else if (autoSelectFirst && this.jobs.length > 0) {
+            const firstCompleted = this.jobs.find(j => j.status === 'COMPLETED') || this.jobs[0];
+            await this.selectJob(firstCompleted);
+          }
         }
       } catch (e) {
         console.error('Lỗi tải danh sách job:', e);
@@ -176,49 +239,36 @@ function reupApp() {
 
         if (res.ok) {
           const job = await res.json();
-          Swal.fire({
-            icon: 'success',
-            title: 'Đã đưa vào hàng đợi!',
-            text: `Mã tiến trình: #${job.id}`,
-            timer: 2000,
-            showConfirmButton: false,
-            background: '#0f172a',
-            color: '#fff'
-          });
           this.newJob.source_url = '';
           this.newJob.custom_product_hint = '';
-          await this.fetchJobs();
+          await this.fetchJobs(false);
+          await this.selectJob(job);
           await this.fetchStats();
         } else {
           const err = await res.json();
           Swal.fire({
             icon: 'error',
-            title: 'Lỗi tạo job',
-            text: err.detail || 'Không thể gửi yêu cầu',
-            background: '#0f172a',
-            color: '#fff'
+            title: 'Không thể tạo tiến trình',
+            text: err.detail || 'Vui lòng kiểm tra lại đường dẫn video'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
       } finally {
         this.isSubmitting = false;
-        this.refreshIcons();
       }
     },
 
     async deleteJob(jobId) {
       const confirm = await Swal.fire({
-        title: 'Xóa video này?',
-        text: 'Dữ liệu và file video sẽ bị xóa vĩnh viễn',
+        title: `Xóa tiến trình #${jobId}?`,
+        text: 'Bản ghi tiến trình sẽ bị xóa khỏi danh sách.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#334155',
-        confirmButtonText: 'Xóa ngay',
-        cancelButtonText: 'Hủy',
-        background: '#0f172a',
-        color: '#fff'
+        confirmButtonColor: '#a82020',
+        cancelButtonColor: '#6e7b82',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
       });
 
       if (!confirm.isConfirmed) return;
@@ -226,6 +276,10 @@ function reupApp() {
       try {
         const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
         if (res.ok) {
+          if (this.selectedJob && this.selectedJob.id === jobId) {
+            this.selectedJob = null;
+            this.srtCues = [];
+          }
           await this.fetchJobs();
           await this.fetchStats();
         }
@@ -245,28 +299,24 @@ function reupApp() {
         if (res.ok) {
           Swal.fire({
             icon: 'success',
-            title: 'Đã lưu cấu hình!',
-            text: 'Mọi token và endpoint đã được cập nhật trực tiếp vào cơ sở dữ liệu.',
-            timer: 2000,
-            showConfirmButton: false,
-            background: '#0f172a',
-            color: '#fff'
+            title: 'Đã lưu cấu hình',
+            text: 'Thông số Vbee, AI và Facebook đã được cập nhật vào cơ sở dữ liệu.',
+            timer: 1800,
+            showConfirmButton: false
           });
         } else {
-          Swal.fire({ icon: 'error', title: 'Lỗi lưu', text: 'Không thể lưu cài đặt', background: '#0f172a', color: '#fff' });
+          Swal.fire({ icon: 'error', title: 'Lỗi lưu', text: 'Không thể lưu cài đặt' });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
       }
     },
 
     async testConnection(target) {
       Swal.fire({
-        title: `Đang kiểm tra kết nối ${target.toUpperCase()}...`,
+        title: `Đang kiểm tra ${target.toUpperCase()}...`,
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-        background: '#0f172a',
-        color: '#fff'
+        didOpen: () => Swal.showLoading()
       });
 
       let params = {};
@@ -289,9 +339,16 @@ function reupApp() {
           model: this.configForm.ASR_MODEL
         };
       } else if (target === 'vbee') {
-        params = { cookie: this.configForm.VBEE_REFRESH_TOKEN_COOKIE };
+        params = {
+          app_id: this.configForm.VBEE_APP_ID,
+          access_token: this.configForm.VBEE_ACCESS_TOKEN,
+          cookie: this.configForm.VBEE_REFRESH_TOKEN_COOKIE
+        };
       } else if (target === 'shopee') {
-        params = { cookie: this.configForm.SHOPEE_COOKIE, sub_id: this.configForm.SHOPEE_SUB_ID };
+        params = {
+          cookie: this.configForm.SHOPEE_COOKIE,
+          sub_id: this.configForm.SHOPEE_SUB_ID
+        };
       }
 
       try {
@@ -303,28 +360,24 @@ function reupApp() {
 
         const data = await res.json();
         if (data.success) {
-          let detail = data.message || 'Kết nối thành công!';
+          let detail = data.message || 'Kết nối hợp lệ!';
           if (data.page_name) {
             detail += `\nFanpage: ${data.page_name} (ID: ${data.page_id})`;
           }
           Swal.fire({
             icon: 'success',
-            title: 'Kết nối thành công!',
-            text: detail,
-            background: '#0f172a',
-            color: '#fff'
+            title: 'Kết nối hoạt động tốt',
+            text: detail
           });
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Kết nối thất bại',
-            text: data.error || 'Vui lòng kiểm tra lại token hoặc quyền hạn',
-            background: '#0f172a',
-            color: '#fff'
+            text: data.error || 'Vui lòng kiểm tra lại token hoặc quyền truy cập'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message, background: '#0f172a', color: '#fff' });
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message });
       }
     },
 
@@ -336,7 +389,6 @@ function reupApp() {
       this.publishForm.platform = 'facebook';
       this.publishForm.publish_mode = this.configForm.FACEBOOK_PUBLISH_MODE || 'reel';
       this.showPublishModal = true;
-      this.refreshIcons();
     },
 
     async submitManualPublish() {
@@ -352,25 +404,21 @@ function reupApp() {
         if (res.ok && data.success) {
           Swal.fire({
             icon: 'success',
-            title: 'Đã xuất bản thành công!',
-            text: data.message || `Đã đăng video #${this.publishForm.job_id}`,
-            background: '#0f172a',
-            color: '#fff'
+            title: 'Đã xuất bản thành công',
+            text: data.message || `Đã đăng video #${this.publishForm.job_id}`
           });
           this.showPublishModal = false;
-          await this.fetchJobs();
+          await this.fetchJobs(false);
           await this.fetchStats();
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Lỗi xuất bản',
-            text: data.detail || data.error || 'Không thể đăng video',
-            background: '#0f172a',
-            color: '#fff'
+            text: data.detail || data.error || 'Không thể đăng video'
           });
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message, background: '#0f172a', color: '#fff' });
+        Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: e.message });
       } finally {
         this.isPublishing = false;
       }

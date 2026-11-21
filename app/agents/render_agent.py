@@ -52,8 +52,8 @@ class RenderAgent:
 
         filter_str = (
             f"[0:v]subtitles='{local_srt_name}':force_style='{style}'[v];"
-            f"[0:a]volume=0.25[a_orig];"
-            f"[1:a]volume=1.2[a_dub];"
+            f"[0:a]volume=0.12[a_orig];"
+            f"[1:a]volume=1.35[a_dub];"
             f"[a_orig][a_dub]amix=inputs=2:duration=first:dropout_transition=2[a]"
         )
 

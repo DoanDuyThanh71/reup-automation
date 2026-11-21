@@ -273,7 +273,11 @@ def test_connection(payload: TestConnectionRequest):
         }
 
     elif target == "vbee":
-        vbee = VbeeClient(refresh_token_cookie=params.get("cookie"))
+        vbee = VbeeClient(
+            app_id=params.get("app_id"),
+            access_token=params.get("access_token"),
+            refresh_token_cookie=params.get("cookie")
+        )
         return vbee.test_connection()
 
     elif target == "edge-tts":
