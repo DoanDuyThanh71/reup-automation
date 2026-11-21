@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reup Automation - AI Video Studio & Multi-Platform Publisher</title>
+  
+  <!-- Tailwind CSS & Font -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- SweetAlert2 for Toast notifications -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white" x-data="reupApp()" x-init="initApp()">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-16 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-40 px-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center shadow-lg shadow-brand-500/20 ring-1 ring-white/20">
+        <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Reup Automation</h1>
+        <p class="text-xs text-slate-400 font-medium">Douyin/TikTok Subber & Multi-Channel Publisher</p>
+      </div>
+    </div>
+
+    <!-- Tab navigation -->
+    <nav class="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+      <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Studio</span>
+      </button>
+      <button @click="activeTab = 'jobs'" :class="activeTab === 'jobs' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all">
+        <i data-lucide="film" class="w-4 h-4"></i>
+        <span>Danh sách video (<span x-text="jobs.length"></span>)</span>
+      </button>
+      <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all">
+        <i data-lucide="key" class="w-4 h-4"></i>
+        <span>Cấu hình Token & API</span>
+      </button>
+      <button @click="activeTab = 'logs'" :class="activeTab === 'logs' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all">
+        <i data-lucide="terminal" class="w-4 h-4"></i>
+        <span>Live Logs</span>
+      </button>
+    </nav>
+
+    <!-- Quick Stats Pill -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>VPS Online</span>
+      </div>
+      <button @click="fetchJobs(); fetchStats();" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: STUDIO DASHBOARD                    -->
+    <!-- ========================================== -->
+    <div x-show="activeTab === 'dashboard'" class="space-y-6" x-transition>
+      
+      <!-- Quick Metric Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase tracking-wider">Tổng video xử lý</span>
+            <i data-lucide="video" class="w-4 h-4 text-brand-500"></i>
+          </div>
+          <div class="text-2xl font-bold text-white" x-text="stats.total_jobs || 0">0</div>
+        </div>
+
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase tracking-wider">Hoàn thành</span>
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-emerald-400" x-text="stats.completed_jobs || 0">0</div>
+        </div>
+
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase tracking-wider">Đã đăng Facebook</span>
+            <i data-lucide="facebook" class="w-4 h-4 text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-blue-400" x-text="stats.facebook_published || 0">0</div>
+        </div>
+
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase tracking-wider">Đã đăng TikTok</span>
+            <i data-lucide="share-2" class="w-4 h-4 text-pink-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-pink-400" x-text="stats.tiktok_published || 0">0</div>
+        </div>
+      </div>
+
+      <!-- Action Panel: Quick URL Ingestion Form -->
+      <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-72 h-72 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-3xl space-y-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="play-circle" class="w-5 h-5 text-brand-500"></i>
+              <span>Nhập link video để tự động hóa toàn bộ</span>
+            </h2>
+            <p class="text-xs text-slate-400">Hỗ trợ link Douyin, TikTok, YouTube Shorts hoặc link file MP4 trực tiếp. Hệ thống sẽ tự cào $\rightarrow$ bóc tách sub $\rightarrow$ dịch tiếng Việt $\rightarrow$ lồng tiếng $\rightarrow$ burn sub nghệ thuật $\rightarrow$ auto đăng bài.</p>
+          </div>
+
+          <!-- URL Input Box -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1 relative">
+              <input type="text" x-model="newJob.source_url" placeholder="Dán link Douyin (https://v.douyin.com/...) hoặc link MP4..." class="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm placeholder:text-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 font-mono">
+            </div>
+            <button @click="submitJob()" :disabled="isSubmitting || !newJob.source_url.trim()" class="bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 disabled:opacity-50 text-white font-semibold text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 transition">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+              <span x-text="isSubmitting ? 'Đang tạo job...' : 'Bắt đầu xử lý ngay'">Bắt đầu xử lý ngay</span>
+            </button>
+          </div>
+
+          <!-- Advanced Options (Collapsible) -->
+          <div class="pt-2">
+            <button @click="showAdvanced = !showAdvanced" class="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-medium transition">
+              <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+              <span>Tùy chọn nâng cao (Gợi ý sản phẩm, Giọng đọc, Tự động đăng FB/TikTok)</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform" :class="showAdvanced ? 'rotate-180' : ''"></i>
+            </button>
+
+            <div x-show="showAdvanced" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 rounded-xl bg-slate-950/50 border border-slate-800/80" x-transition>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gợi ý sản phẩm Shopee (Nếu có)</label>
+                <input type="text" x-model="newJob.custom_product_hint" placeholder="Ví dụ: máy hút bụi cầm tay" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Giọng đọc lồng tiếng</label>
+                <select x-model="newJob.voice_code" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                  <option value="">Mặc định theo cấu hình hệ thống</option>
+                  <option value="vi_female_hn_ngoc_huyen">Vbee - Ngọc Huyền (Nữ Bắc chuẩn)</option>
+                  <option value="vi_male_hn_nam_mien_bac">Vbee - Mạnh Dũng (Nam Bắc)</option>
+                  <option value="vi_female_sg_lan_nhi">Vbee - Lan Nhi (Nữ Nam)</option>
+                  <option value="vi-VN-HoaiMyNeural">Edge-TTS - Hoài My (Nữ Bắc miễn phí)</option>
+                  <option value="vi-VN-NamMinhNeural">Edge-TTS - Nam Minh (Nam Bắc miễn phí)</option>
+                </select>
+              </div>
+
+              <div class="flex flex-col justify-end space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                  <input type="checkbox" x-model="newJob.auto_post_facebook" class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-brand-500">
+                  <span>Tự động đăng Facebook Reel khi xong</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                  <input type="checkbox" x-model="newJob.auto_post_tiktok" class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-brand-500">
+                  <span>Tự động gửi/đăng lên TikTok khi xong</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Job Cards or Recent Table -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Video gần đây nhất</h3>
+          <span class="text-xs text-slate-500">Tự động cập nhật mỗi 5 giây</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="job in jobs.slice(0, 6)" :key="job.id">
+            <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 space-y-4 flex flex-col justify-between transition-all">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="px-2.5 py-1 rounded-md text-[10px] font-bold font-mono tracking-wider uppercase"
+                    :class="{
+                      'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20': job.status === 'COMPLETED',
+                      'bg-amber-500/10 text-amber-400 border border-amber-500/20': ['INGESTING', 'TRANSCRIBING', 'TRANSLATING', 'DUBBING', 'RENDERING', 'PUBLISHING'].includes(job.status),
+                      'bg-rose-500/10 text-rose-400 border border-rose-500/20': job.status === 'FAILED',
+                      'bg-slate-800 text-slate-400': job.status === 'PENDING'
+                    }" x-text="job.status">
+                  </span>
+                  <span class="text-[11px] text-slate-500 font-mono" x-text="'#' + job.id"></span>
+                </div>
+
+                <h4 class="text-sm font-bold text-white line-clamp-2" x-text="job.title || job.source_url"></h4>
+                <p class="text-xs text-slate-400 mt-1 line-clamp-2" x-text="job.caption || job.current_stage"></p>
+                
+                <!-- Progress bar if processing -->
+                <div x-show="job.status !== 'COMPLETED' && job.status !== 'FAILED'" class="mt-3 space-y-1">
+                  <div class="flex justify-between text-[11px] text-slate-400">
+                    <span x-text="job.current_stage"></span>
+                    <span x-text="job.progress + '%'"></span>
+                  </div>
+                  <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-gradient-to-r from-brand-500 to-violet-500 h-1.5 rounded-full transition-all duration-500" :style="'width: ' + job.progress + '%'"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
+                <div class="flex items-center gap-1.5">
+                  <button @click="openPublishModal(job)" class="p-2 rounded-lg bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 text-xs font-semibold flex items-center gap-1 transition" title="Đăng lên Facebook/TikTok">
+                    <i data-lucide="share" class="w-3.5 h-3.5"></i>
+                    <span>Đăng</span>
+                  </button>
+                  <a x-show="job.video_url" :href="job.video_url" target="_blank" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition" title="Xem video">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                  </a>
+                  <a x-show="job.srt_url" :href="job.srt_url" download class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition" title="Tải file SRT">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                  </a>
+                </div>
+
+                <button @click="deleteJob(job.id)" class="text-slate-500 hover:text-rose-400 p-2 transition" title="Xóa">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: DETAILED JOBS LIST                  -->
+    <!-- ========================================== -->
+    <div x-show="activeTab === 'jobs'" class="space-y-4" x-transition>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white">Quản lý toàn bộ video đã xử lý</h2>
+          <p class="text-xs text-slate-400">Xem video hoàn chỉnh, kiểm tra kịch bản sub, chỉnh sửa và đăng lại thủ công.</p>
+        </div>
+        <button @click="fetchJobs()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5 transition">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>Làm mới</span>
+        </button>
+      </div>
+
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/80 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider">
+              <tr>
+                <th class="px-4 py-3">Mã Job</th>
+                <th class="px-4 py-3">Tiêu đề & Nội dung</th>
+                <th class="px-4 py-3">Trạng thái</th>
+                <th class="px-4 py-3">Sản phẩm / Affiliate</th>
+                <th class="px-4 py-3">Mạng xã hội</th>
+                <th class="px-4 py-3 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              <template x-for="job in jobs" :key="job.id">
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="px-4 py-3 font-mono font-medium text-slate-400" x-text="job.id"></td>
+                  <td class="px-4 py-3 max-w-sm">
+                    <div class="font-bold text-white line-clamp-1" x-text="job.title || 'Đang tạo tiêu đề...'"></div>
+                    <div class="text-[11px] text-slate-400 line-clamp-1 mt-0.5" x-text="job.caption || job.source_url"></div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider uppercase"
+                      :class="{
+                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20': job.status === 'COMPLETED',
+                        'bg-amber-500/10 text-amber-400 border border-amber-500/20': ['INGESTING', 'TRANSCRIBING', 'TRANSLATING', 'DUBBING', 'RENDERING', 'PUBLISHING'].includes(job.status),
+                        'bg-rose-500/10 text-rose-400 border border-rose-500/20': job.status === 'FAILED',
+                        'bg-slate-800 text-slate-400': job.status === 'PENDING'
+                      }" x-text="job.status">
+                    </span>
+                    <div class="text-[10px] text-slate-500 mt-1" x-text="job.current_stage"></div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="text-white font-medium" x-text="job.product_keyword || '-'"></div>
+                    <a x-show="job.affiliate_link" :href="job.affiliate_link" target="_blank" class="text-brand-400 hover:underline text-[11px] flex items-center gap-1 mt-0.5">
+                      <i data-lucide="link" class="w-3 h-3"></i>
+                      <span>Link Shopee</span>
+                    </a>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <span class="flex items-center gap-1 text-[11px]" :class="job.published_facebook ? 'text-blue-400' : 'text-slate-500'">
+                        <i data-lucide="facebook" class="w-3.5 h-3.5"></i>
+                        <span x-text="job.published_facebook ? 'Đã đăng' : 'Chưa'"></span>
+                      </span>
+                      <span class="flex items-center gap-1 text-[11px]" :class="job.published_tiktok ? 'text-pink-400' : 'text-slate-500'">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                        <span x-text="job.published_tiktok ? 'Đã gửi' : 'Chưa'"></span>
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button @click="openPublishModal(job)" class="px-2.5 py-1 rounded bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-semibold transition">
+                        Đăng bài
+                      </button>
+                      <a x-show="job.video_url" :href="job.video_url" target="_blank" class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                      </a>
+                      <button @click="deleteJob(job.id)" class="p-1.5 text-slate-500 hover:text-rose-400 rounded hover:bg-slate-800 transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: CONFIGURATION & CREDENTIALS         -->
+    <!-- ========================================== -->
+    <div x-show="activeTab === 'settings'" class="space-y-6" x-transition>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="key" class="w-5 h-5 text-brand-500"></i>
+            <span>Trung tâm quản lý Token & Endpoint</span>
+          </h2>
+          <p class="text-xs text-slate-400">Dán tất cả API key, Token Facebook, Vbee, Shopee tại đây. Cấu hình được lưu trực tiếp vào cơ sở dữ liệu trên VPS mà không cần khởi động lại app!</p>
+        </div>
+        <button @click="saveAllConfigs()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>Lưu tất cả thay đổi</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- 1. FACEBOOK AUTO-PUBLISH SETTINGS -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="facebook" class="w-5 h-5 text-blue-400"></i>
+              <h3 class="text-sm font-bold text-white">Facebook Reels & Video Publishing</h3>
+            </div>
+            <button @click="testConnection('facebook')" class="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold flex items-center gap-1 transition">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Kiểm tra kết nối</span>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Facebook Page ID</label>
+              <input type="text" x-model="configForm.FACEBOOK_PAGE_ID" placeholder="Ví dụ: 100083921829..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Facebook Page Access Token</label>
+              <textarea rows="3" x-model="configForm.FACEBOOK_PAGE_ACCESS_TOKEN" placeholder="Dán mã Page Access Token vĩnh viễn (EAA...)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Chế độ đăng bài</label>
+                <select x-model="configForm.FACEBOOK_PUBLISH_MODE" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                  <option value="reel">Facebook Reels (Video ngắn 9:16)</option>
+                  <option value="video">Bài đăng Video Fanpage thường</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Tự động đăng khi render xong</label>
+                <select x-model="configForm.FACEBOOK_AUTO_PUBLISH" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                  <option value="false">Tắt (Đăng thủ công)</option>
+                  <option value="true">Bật (Tự động đăng 100%)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. AI CONTENT & SEO SETTINGS -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bot" class="w-5 h-5 text-violet-400"></i>
+              <h3 class="text-sm font-bold text-white">Mô hình AI Dịch Sub & Tạo Tiêu Đề</h3>
+            </div>
+            <button @click="testConnection('ai')" class="px-2.5 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 text-xs font-semibold flex items-center gap-1 transition">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Test AI</span>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">AI Base URL / Endpoint</label>
+              <input type="text" x-model="configForm.AI_BASE_URL" placeholder="https://9router.n8n71.com/v1 hoặc https://api.openai.com/v1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Tên Model</label>
+                <input type="text" x-model="configForm.AI_MODEL" placeholder="AiFF / gpt-4o-mini" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">AI API Key</label>
+                <input type="password" x-model="configForm.AI_API_KEY" placeholder="sk-..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. VOICE DUBBING (VBEE & EDGE-TTS) -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="mic" class="w-5 h-5 text-emerald-400"></i>
+              <h3 class="text-sm font-bold text-white">Lồng tiếng AI (Vbee & Edge-TTS)</h3>
+            </div>
+            <button @click="testConnection('vbee')" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-1 transition">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Test Vbee</span>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nhà cung cấp lồng tiếng</label>
+                <select x-model="configForm.TTS_PROVIDER" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                  <option value="vbee">Vbee Studio (API & Cookie)</option>
+                  <option value="edge-tts">Edge-TTS (Miễn phí 100%, không cần key)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Mã giọng Vbee</label>
+                <input type="text" x-model="configForm.VBEE_VOICE_CODE" placeholder="vi_female_hn_ngoc_huyen" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Giọng đọc Edge-TTS dự phòng (Miễn phí)</label>
+              <select x-model="configForm.EDGE_TTS_VOICE" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                <option value="vi-VN-HoaiMyNeural">vi-VN-HoaiMyNeural (Nữ Miền Bắc - Hoài My)</option>
+                <option value="vi-VN-NamMinhNeural">vi-VN-NamMinhNeural (Nam Miền Bắc - Nam Minh)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Vbee Refresh Token Cookie</label>
+              <textarea rows="2" x-model="configForm.VBEE_REFRESH_TOKEN_COOKIE" placeholder="Dán cookie chuỗi refresh_token từ studio.vbee.vn..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. AUDIO ASR (SPEECH TO TEXT) -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="ear" class="w-5 h-5 text-cyan-400"></i>
+              <h3 class="text-sm font-bold text-white">Bóc tách phụ đề (ASR Speech-to-Text)</h3>
+            </div>
+            <button @click="testConnection('asr')" class="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-semibold flex items-center gap-1 transition">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Test ASR</span>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nhà cung cấp ASR</label>
+                <select x-model="configForm.ASR_PROVIDER" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                  <option value="shopaikey">ShopAIKey Whisper</option>
+                  <option value="groq">Groq Whisper</option>
+                  <option value="openai">OpenAI Whisper</option>
+                  <option value="local">Local Whisper</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Model Whisper</label>
+                <input type="text" x-model="configForm.ASR_MODEL" placeholder="whisper-1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">ASR Base URL / Endpoint</label>
+              <input type="text" x-model="configForm.ASR_BASE_URL" placeholder="https://api.shopaikey.com/v1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">ASR API Key</label>
+              <input type="password" x-model="configForm.ASR_API_KEY" placeholder="sk-..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. E-COMMERCE & TIKTOK -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4 md:col-span-2">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="shopping-bag" class="w-5 h-5 text-orange-400"></i>
+              <h3 class="text-sm font-bold text-white">Shopee Affiliate, Douyin & TikTok Publishing</h3>
+            </div>
+            <button @click="testConnection('shopee')" class="px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs font-semibold flex items-center gap-1 transition">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Test Shopee</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Shopee Sub-ID Affiliate</label>
+              <input type="text" x-model="configForm.SHOPEE_SUB_ID" placeholder="16550927460" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">TikTok Webhook URL (n8n/Make)</label>
+              <input type="text" x-model="configForm.TIKTOK_WEBHOOK_URL" placeholder="https://n8n.yourdomain.com/webhook/..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">TikTok Session ID / Cookie</label>
+              <input type="password" x-model="configForm.TIKTOK_SESSION_ID" placeholder="sessionid=..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Douyin Cookie (Tải video HD)</label>
+              <input type="password" x-model="configForm.DOUYIN_COOKIE" placeholder="douyin cookie string..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Shopee Cookie (Tìm sản phẩm tự động)</label>
+              <input type="password" x-model="configForm.SHOPEE_COOKIE" placeholder="shopee cookie string..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Tự động đăng TikTok khi render xong</label>
+              <select x-model="configForm.TIKTOK_AUTO_PUBLISH" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+                <option value="false">Tắt (Đăng thủ công)</option>
+                <option value="true">Bật (Tự động gửi TikTok)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: LIVE LOGS                           -->
+    <!-- ========================================== -->
+    <div x-show="activeTab === 'logs'" class="space-y-4" x-transition>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="terminal" class="w-5 h-5 text-brand-500"></i>
+            <span>Nhật ký thời gian thực (Terminal Live Logs)</span>
+          </h2>
+          <p class="text-xs text-slate-400">Theo dõi tiến trình chi tiết của từng bước chạy.</p>
+        </div>
+        <button @click="liveLogs = []" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">
+          Xóa màn hình
+        </button>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs h-[550px] overflow-y-auto space-y-1.5 shadow-inner">
+        <template x-for="(log, idx) in liveLogs" :key="idx">
+          <div class="flex items-start gap-3">
+            <span class="text-slate-600 select-none" x-text="log.time"></span>
+            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase"
+              :class="{
+                'bg-emerald-500/10 text-emerald-400': log.level === 'INFO',
+                'bg-amber-500/10 text-amber-400': log.level === 'WARN',
+                'bg-rose-500/10 text-rose-400': log.level === 'ERROR'
+              }" x-text="log.level">
+            </span>
+            <span class="text-slate-400 font-bold" x-text="'[' + (log.stage || 'System') + ']'"></span>
+            <span class="text-slate-200" x-text="log.message"></span>
+          </div>
+        </template>
+        <div x-show="liveLogs.length === 0" class="text-slate-600 text-center py-20">
+          Chưa có nhật ký nào được ghi nhận.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: MANUAL PUBLISH TO FACEBOOK / TIKTOK -->
+  <!-- ========================================== -->
+  <div x-show="showPublishModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" x-transition>
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative" @click.outside="showPublishModal = false">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="share-2" class="w-5 h-5 text-brand-500"></i>
+          <span>Xuất bản Video lên Mạng Xã Hội</span>
+        </h3>
+        <button @click="showPublishModal = false" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nền tảng xuất bản</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" @click="publishForm.platform = 'facebook'" :class="publishForm.platform === 'facebook' ? 'border-blue-500 bg-blue-500/10 text-white font-bold' : 'border-slate-800 text-slate-400'" class="p-3 rounded-xl border flex items-center justify-center gap-2 text-xs transition">
+              <i data-lucide="facebook" class="w-4 h-4 text-blue-400"></i>
+              <span>Facebook (Page / Reels)</span>
+            </button>
+            <button type="button" @click="publishForm.platform = 'tiktok'" :class="publishForm.platform === 'tiktok' ? 'border-pink-500 bg-pink-500/10 text-white font-bold' : 'border-slate-800 text-slate-400'" class="p-3 rounded-xl border flex items-center justify-center gap-2 text-xs transition">
+              <i data-lucide="share-2" class="w-4 h-4 text-pink-400"></i>
+              <span>TikTok</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tiêu đề video</label>
+          <input type="text" x-model="publishForm.title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nội dung Caption (Đã lọc từ khóa an toàn)</label>
+          <textarea rows="3" x-model="publishForm.caption" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Hashtags</label>
+          <input type="text" x-model="publishForm.hashtags" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none font-mono">
+        </div>
+
+        <div x-show="publishForm.platform === 'facebook'" class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
+          <label class="block text-xs font-semibold text-slate-400">Hình thức đăng Facebook</label>
+          <select x-model="publishForm.publish_mode" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-500 focus:outline-none">
+            <option value="reel">Facebook Reel (Khuyến nghị cho video dọc)</option>
+            <option value="video">Bài đăng Video thông thường</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button @click="showPublishModal = false" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">
+          Hủy
+        </button>
+        <button @click="submitManualPublish()" :disabled="isPublishing" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-500/20 flex items-center gap-1.5 transition">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span x-text="isPublishing ? 'Đang xuất bản...' : 'Xác nhận đăng'">Xác nhận đăng</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  reup-automation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reup-automation
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./temp:/app/temp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
