@@ -432,14 +432,17 @@
       <!-- Primary Workspace Switcher -->
       <nav class="seg" role="tablist" aria-label="Workspace">
         <button type="button" @click="activeTab = 'dashboard'" :aria-pressed="String(activeTab === 'dashboard')">
-          <span>Studio</span>
+          <span>1-Click Studio</span>
         </button>
         <button type="button" @click="activeTab = 'jobs'" :aria-pressed="String(activeTab === 'jobs')">
           <span>Băng chuyền</span>
           <span class="seg__count" x-text="jobs.length">0</span>
         </button>
-        <button type="button" @click="activeTab = 'settings'" :aria-pressed="String(activeTab === 'settings')">
-          <span>Token & API</span>
+        <button type="button" @click="activeTab = 'analytics'; fetchAnalytics();" :aria-pressed="String(activeTab === 'analytics')">
+          <span>Thống kê & Kênh</span>
+        </button>
+        <button type="button" @click="activeTab = 'settings'; fetchQuotaStatus();" :aria-pressed="String(activeTab === 'settings')">
+          <span>Token & Quota</span>
         </button>
         <button type="button" @click="activeTab = 'logs'" :aria-pressed="String(activeTab === 'logs')">
           <span>Terminal</span>
@@ -447,6 +450,9 @@
       </nav>
 
       <!-- Light / Dark Theme Switcher (taste-skill cards.html) -->
+      <div x-show="licenseInfo && licenseInfo.registered" class="ui-chip ui-chip--accent hidden md:inline-flex" style="font-size:11.5px;" :title="'Mã máy: ' + (licenseInfo?.current_hwid || '')">
+        <span class="mono" x-text="(licenseInfo?.email || 'Activated') + ' • ' + (licenseInfo?.current_hwid || '')"></span>
+      </div>
       <div class="seg hidden sm:inline-flex" role="group" aria-label="Giao diện">
         <button type="button" data-set-theme="dark" aria-pressed="true">Dark</button>
         <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
@@ -472,32 +478,31 @@
         <article class="card" style="justify-content: space-between;">
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
-              <h3>Nạp video nguồn vào dây chuyền 7 Agent</h3>
-              <div style="display:flex;align-items:center;gap:8px;">
+              <h3>⚡ Tự động hóa 1-Click: Chỉ cần dán Link là xong</h3>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div class="seg" role="group" aria-label="Chế độ nạp">
                   <button type="button" @click="isBatchMode = false" :aria-pressed="String(!isBatchMode)" style="height:26px;padding:0 10px;font-size:12px;">1 Video</button>
-                  <button type="button" @click="isBatchMode = true" :aria-pressed="String(isBatchMode)" style="height:26px;padding:0 10px;font-size:12px;">Multi-Video (3+)</button>
+                  <button type="button" @click="isBatchMode = true" :aria-pressed="String(isBatchMode)" style="height:26px;padding:0 10px;font-size:12px;">Hàng loạt (Batch)</button>
                 </div>
-                <span class="ui-chip ui-chip--accent">Vbee 48kHz Default</span>
+                <span class="ui-chip ui-chip--accent">Gemini Xem Video • FB + TikTok + Shopee</span>
               </div>
             </div>
-            <p>Hỗ trợ dán 1 link hoặc nhiều link Douyin / TikTok / MP4 cùng lúc (mỗi dòng 1 link). Hệ thống tự động bóc tách SRT, dịch 1:1, kiểm định Shopee Affiliate (Agent 7) và ghép giọng Vbee đúng mili-giây.</p>
+            <p>Dán link Douyin / TikTok / MP4 và bấm 1 nút duy nhất: <b>Gemini tự xem hình + hardsub dịch tiếng Việt</b> → <b>Lồng tiếng Vbee</b> → <b>Đổi vân tay bảo mật</b> → <b>Gắn Shopee Affiliate</b> → <b>Tự đăng Kênh 71 & TikTok</b>.</p>
 
-            <!-- URL Submission Form -->
-            <form @submit.prevent="isBatchMode ? submitBatchJobs() : submitJob()" style="margin-top: 18px; display: grid; gap: 14px;">
+            <!-- 1-Click Minimal URL Submission Form -->
+            <form @submit.prevent="isBatchMode ? submitBatchJobs() : submitJob()" style="margin-top: 18px; display: grid; gap: 12px;">
               <template x-if="!isBatchMode">
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                   <input
                     type="text"
                     x-model="newJob.source_url"
                     required
-                    placeholder="https://www.douyin.com/jingxuan?modal_id=... hoặc https://v.douyin.com/..."
+                    placeholder="Dán link Douyin / TikTok vào đây (VD: https://v.douyin.com/...) rồi bấm nút bên cạnh!"
                     class="ts-input mono"
-                    style="flex: 1; min-width: 240px;"
+                    style="flex: 1; min-width: 240px; height: 46px; font-size: 14px;"
                   >
-                  <button type="submit" :disabled="isSubmitting || !newJob.source_url.trim()" class="btn btn--primary">
-                    <span x-text="isSubmitting ? 'Đang khởi tạo...' : 'Chạy Pipeline'">Chạy Pipeline</span>
-                    <svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+                  <button type="submit" :disabled="isSubmitting || !newJob.source_url.trim()" class="btn btn--primary" style="height: 46px; padding: 0 22px; font-weight: 600;">
+                    <span x-text="isSubmitting ? 'Đang chạy tự động...' : '⚡ Chạy 1-Click Toàn Trình'">⚡ Chạy 1-Click Toàn Trình</span>
                   </button>
                 </div>
               </template>
@@ -507,49 +512,72 @@
                   <textarea
                     rows="3"
                     x-model="batchUrlsText"
-                    placeholder="Dán 3 hoặc nhiều link video (mỗi dòng 1 link Douyin / TikTok / MP4)..."
+                    placeholder="Dán nhiều link video (mỗi dòng 1 link Douyin / TikTok / MP4)..."
                     class="ts-textarea mono"
                   ></textarea>
                   <div style="display:flex;justify-content:flex-end;">
                     <button type="submit" :disabled="isSubmitting || !batchUrlsText.trim()" class="btn btn--primary">
-                      <span x-text="isSubmitting ? 'Đang nạp hàng loạt...' : 'Chạy Multi-Video Pipeline'">Chạy Multi-Video Pipeline</span>
-                      <svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+                      <span x-text="isSubmitting ? 'Đang nạp hàng loạt...' : '⚡ Chạy 1-Click Hàng Loạt'">⚡ Chạy 1-Click Hàng Loạt</span>
                     </button>
                   </div>
                 </div>
               </template>
 
-              <!-- Parameters Row -->
-              <div class="g3" style="padding-top: 4px;">
-                <div class="ts-field">
-                  <label class="ts-label">Giọng đọc Vbee / TTS</label>
-                  <select x-model="newJob.voice_code" class="ts-select">
-                    <option value="">Mặc định (Vbee Ngọc Huyền 48kHz)</option>
-                    <option value="hn_female_ngochuyen_full_48k-fhg">Vbee — Ngọc Huyền (Nữ Hà Nội)</option>
-                    <option value="hn_male_manhdung_news_48k-fhg">Vbee — Mạnh Dũng (Nam Hà Nội)</option>
-                    <option value="sg_female_thaotrinh_full_44k-phg">Vbee — Thảo Trinh (Nữ Sài Gòn)</option>
-                    <option value="vi-VN-HoaiMyNeural">Edge-TTS — Hoài My (Dự phòng)</option>
-                    <option value="vi-VN-NamMinhNeural">Edge-TTS — Nam Minh (Dự phòng)</option>
-                  </select>
+              <!-- Compact 1-Line Status & Optional Advanced Toggle -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:2px;">
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);">
+                  <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink);">
+                    <input type="checkbox" class="m-check" x-model="newJob.auto_post_facebook">
+                    <span>Tự đăng FB (<b>Kênh 71</b>)</span>
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink);">
+                    <input type="checkbox" class="m-check" x-model="newJob.auto_post_tiktok">
+                    <span>Tự đăng TikTok (<b>@tra_sua_nuong_71</b>)</span>
+                  </label>
+                  <span class="mono" style="font-size:11.5px;">🔒 Vân tay chống trùng: BẬT</span>
                 </div>
+                <button type="button" @click="showAdvanced = !showAdvanced" class="btn btn--secondary btn--sm" style="height:26px;font-size:12px;">
+                  <span x-text="showAdvanced ? 'Ẩn tùy chỉnh ▲' : '⚙ Tùy chỉnh nâng cao ▼'">⚙ Tùy chỉnh nâng cao ▼</span>
+                </button>
+              </div>
 
-                <div class="ts-field">
-                  <label class="ts-label">Từ khóa Shopee Affiliate</label>
-                  <input type="text" x-model="newJob.custom_product_hint" placeholder="VD: quạt tích điện mini..." class="ts-input">
-                </div>
-
-                <div class="ts-field">
-                  <label class="ts-label">Xuất bản tự động</label>
-                  <div style="display:flex;align-items:center;gap:16px;height:42px;">
-                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-                      <input type="checkbox" class="m-check" x-model="newJob.auto_post_facebook">
-                      <span>Facebook Reels</span>
-                    </label>
-                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-                      <input type="checkbox" class="m-check" x-model="newJob.auto_post_tiktok">
-                      <span>TikTok</span>
-                    </label>
+              <!-- Collapsible Optional Parameters -->
+              <div x-show="showAdvanced" x-cloak style="display: grid; gap: 12px; padding: 14px; border-radius: 12px; background: color-mix(in oklab, var(--ink) 3%, var(--bg)); border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent);">
+                <div class="g3">
+                  <div class="ts-field">
+                    <label class="ts-label">Giọng đọc Review Phim / TTS</label>
+                    <select x-model="newJob.voice_code" class="ts-select">
+                      <option value="">Theo cài đặt chung</option>
+                      <option value="local:gemini_nam_charon">🎬 Gemini Review Phim — Nam Trầm Charon 1.15x (0đ)</option>
+                      <option value="local:gemini_nu_kore">🎬 Gemini Review Phim — Nữ Sắc Sảo Kore 1.15x (0đ)</option>
+                      <option value="hn_male_manhdung_news_48k-fhg">🎙 Vbee — Mạnh Dũng (Nam Review Phim Kinh Điển)</option>
+                      <option value="hn_female_ngochuyen_full_48k-fhg">🎙 Vbee — Ngọc Huyền (Nữ Hà Nội 48kHz)</option>
+                      <option value="sg_female_thaotrinh_full_44k-phg">🎙 Vbee — Thảo Trinh (Nữ Sài Gòn)</option>
+                      <option value="local:vieneu">🖥 Local GPU — VieNeu 48kHz Clone Giọng Mẫu WAV</option>
+                      <option value="local:rv_nu_kich_tinh">🖥 Offline ONNX 64MB — Nữ Đọc Tin (Không mạng)</option>
+                    </select>
                   </div>
+
+                  <div class="ts-field">
+                    <label class="ts-label">Bối cảnh & Xưng hô Phim</label>
+                    <select x-model="newJob.translate_style_preset" class="ts-select">
+                      <option value="review_tom_tat">🎬 Review / Tóm tắt phim kịch tính (Ngôi 3)</option>
+                      <option value="tong_tai_hien_dai">💼 Tổng tài / Đô thị hiện đại (Anh - Em / Chủ tịch)</option>
+                      <option value="co_trang_tien_hiep">🏯 Cổ trang / Cung đấu / Tiên hiệp (Trẫm - Nàng / Ta - Ngươi)</option>
+                      <option value="hoc_duong_thanh_xuan">🏫 Học đường / Thanh xuân (Cậu - Tớ / Đàn anh)</option>
+                      <option value="gia_dinh_drama">🏠 Gia đình / Mẹ chồng nàng dâu</option>
+                    </select>
+                  </div>
+
+                  <div class="ts-field">
+                    <label class="ts-label">Gợi ý sản phẩm Shopee</label>
+                    <input type="text" x-model="newJob.custom_product_hint" placeholder="Để trống = AI tự nhìn video..." class="ts-input">
+                  </div>
+                </div>
+
+                <div class="ts-field">
+                  <label class="ts-label">Custom Prompt Dịch & Khóa Xưng Hô Nhân Vật (Chống lẫn người cho video 5p+)</label>
+                  <textarea rows="2" x-model="newJob.custom_translate_prompt" placeholder="VD: Nam chính Lâm Phong xưng Anh - Em với Tô Uyển; gã phản diện Trương Thiếu gọi là hắn, xưng Tao - Mày. Giữ nhịp kịch tính..." class="ts-textarea"></textarea>
                 </div>
               </div>
             </form>
@@ -569,7 +597,7 @@
                   </div>
                   <ol class="ui-pipe__steps" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px;padding:8px 12px;">
                     <li class="ui-pipe__step" :class="isStageRunning(['INGESTING']) ? 'is-run' : 'is-done'" style="--k:0.5"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">1. Playwright Douyin HD</span></span><code class="ui-pipe__cmd">1080p MP4</code><span class="ui-pipe__time" x-text="isStageRunning(['INGESTING']) ? 'Đang tải' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
-                    <li class="ui-pipe__step" :class="isStageRunning(['TRANSCRIBING']) ? 'is-run' : 'is-done'" style="--k:0.6"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">2. ShopAIKey Whisper ASR</span></span><code class="ui-pipe__cmd">SRT Timecode</code><span class="ui-pipe__time" x-text="isStageRunning(['TRANSCRIBING']) ? 'Đang tách' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
+                    <li class="ui-pipe__step" :class="isStageRunning(['TRANSCRIBING']) ? 'is-run' : 'is-done'" style="--k:0.6"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">2. Gemini Video Vision</span></span><code class="ui-pipe__cmd">Xem hình + Sub</code><span class="ui-pipe__time" x-text="isStageRunning(['TRANSCRIBING']) ? 'Đang xem' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
                     <li class="ui-pipe__step" :class="isStageRunning(['TRANSLATING']) ? 'is-run' : 'is-done'" style="--k:0.7"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">3. LLM 1:1 & Affiliate Agent</span></span><code class="ui-pipe__cmd">Shopee SubID</code><span class="ui-pipe__time" x-text="isStageRunning(['TRANSLATING']) ? 'Đang dịch' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
                     <li class="ui-pipe__step" :class="isStageRunning(['DUBBING', 'RENDERING']) ? 'is-run' : 'is-done'" style="--k:0.85"><span class="ui-pipe__ico"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-pipe__name"><span class="ui-pipe__nm">4. Vbee 48kHz & Burn Sub</span></span><code class="ui-pipe__cmd">PCM Sync</code><span class="ui-pipe__time" x-text="isStageRunning(['DUBBING', 'RENDERING']) ? 'Đang ghép' : 'Hoàn tất'">Hoàn tất</span><span class="ui-pipe__bar"><i></i></span></li>
                   </ol>
@@ -794,6 +822,113 @@
     </section>
 
     <!-- =================================================================== -->
+    <!-- TAB 2.5: REAL-TIME MULTI-CHANNEL ANALYTICS & TRACKING               -->
+    <!-- =================================================================== -->
+    <section class="sec" x-show="activeTab === 'analytics'" x-cloak x-transition.opacity>
+      <div class="sec__head">
+        <div>
+          <h2>Thống kê & Theo dõi Đa kênh. <span>Đồng bộ trực tiếp Views/Likes Fanpage Kênh 71, TikTok @tra_sua_nuong_71, Shopee & Vân tay bảo mật.</span></h2>
+        </div>
+        <button type="button" @click="fetchAnalytics()" class="btn btn--primary btn--sm">
+          <span x-text="isLoadingAnalytics ? 'Đang đồng bộ...' : '↻ Đồng bộ số liệu mới nhất'">↻ Đồng bộ số liệu mới nhất</span>
+        </button>
+      </div>
+
+      <template x-if="analyticsData">
+        <div style="display: grid; gap: 20px;">
+          <!-- 4 Channel Summary Cards -->
+          <div class="g4">
+            <article class="card" style="--c-pad: 22px; gap: 8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sec__tag">FACEBOOK FANPAGE</span>
+                <span class="ui-chip ui-chip--accent" x-text="analyticsData.facebook?.connected ? 'Online' : 'Offline'"></span>
+              </div>
+              <h3 x-text="analyticsData.facebook?.page_name || 'Kênh 71'"></h3>
+              <div class="mono" style="font-size: 24px; font-weight: 600;" x-text="(analyticsData.facebook?.total_views || 0) + ' lượt xem'"></div>
+              <div style="font-size: 12.5px; color: var(--muted);">
+                Likes: <b x-text="analyticsData.facebook?.total_likes || 0"></b> • Bình luận: <b x-text="analyticsData.facebook?.total_comments || 0"></b>
+              </div>
+              <div class="mono" style="font-size: 11px; color: var(--muted);" x-text="'Vân tay Token: ' + (analyticsData.facebook?.token_fingerprint || '—')"></div>
+            </article>
+
+            <article class="card" style="--c-pad: 22px; gap: 8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sec__tag">TIKTOK CREATOR</span>
+                <span class="ui-chip ui-chip--accent" x-text="analyticsData.tiktok?.connected ? 'Online' : 'Offline'"></span>
+              </div>
+              <h3 x-text="analyticsData.tiktok?.username ? ('@' + analyticsData.tiktok.username) : '@tra_sua_nuong_71'"></h3>
+              <div class="mono" style="font-size: 24px; font-weight: 600;" x-text="(analyticsData.tiktok?.stats?.followerCount || 0) + ' followers'"></div>
+              <div style="font-size: 12.5px; color: var(--muted);">
+                Tim: <b x-text="analyticsData.tiktok?.stats?.heartCount || 0"></b> • Video trên kênh: <b x-text="analyticsData.tiktok?.stats?.videoCount || 0"></b>
+              </div>
+              <div class="mono" style="font-size: 11px; color: var(--muted);" x-text="'Vân tay trình duyệt: ' + (analyticsData.tiktok?.browser_fingerprint || '—')"></div>
+            </article>
+
+            <article class="card" style="--c-pad: 22px; gap: 8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sec__tag">SHOPEE AFFILIATE</span>
+                <span class="ui-chip ui-chip--accent">Active</span>
+              </div>
+              <h3 x-text="'@' + (analyticsData.shopee?.username || 'doanduythanh71')"></h3>
+              <div class="mono" style="font-size: 22px; font-weight: 600;" x-text="'ID: ' + (analyticsData.shopee?.affiliate_id || '17374600599')"></div>
+              <div style="font-size: 12.5px; color: var(--muted);">
+                Video gắn link: <b x-text="analyticsData.shopee?.attributed_videos_count || 0"></b> • Sub-ID: <span class="mono" x-text="analyticsData.shopee?.sub_id || 'kenh71'"></span>
+              </div>
+              <div class="mono" style="font-size: 11px; color: var(--muted);" x-text="'Vân tay Cookie: ' + (analyticsData.shopee?.cookie_fingerprint || '—')"></div>
+            </article>
+
+            <article class="card" style="--c-pad: 22px; gap: 8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sec__tag">POOL TOKEN & GEMINI</span>
+                <span class="ui-chip ui-chip--accent" x-text="(analyticsData.quota_pool?.healthy_keys || 0) + '/' + (analyticsData.quota_pool?.total_keys || 0) + ' khỏe'"></span>
+              </div>
+              <h3>Gemini Video Vision</h3>
+              <div class="mono" style="font-size: 24px; font-weight: 600;" x-text="(analyticsData.quota_pool?.total_keys || 0) + ' nguồn Key'"></div>
+              <div style="font-size: 12.5px; color: var(--muted);">
+                Tự động xoay vòng khi hết hạn mức / 429
+              </div>
+              <div class="mono" style="font-size: 11px; color: var(--muted);">Mã hóa SQLite: ENC:v1:HMAC-SHA256</div>
+            </article>
+          </div>
+
+          <!-- Live Facebook Reels & Videos Performance Table -->
+          <article class="card" style="padding: 0; overflow-x: auto;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; font-size:16px;">Hiệu suất Video & Reels thực tế trên Fanpage (<span x-text="analyticsData.facebook?.page_name || 'Kênh 71'"></span>)</h3>
+              <a :href="analyticsData.facebook?.link || 'https://www.facebook.com/1058364167367881'" target="_blank" class="btn btn--secondary btn--sm">Mở Fanpage ↗</a>
+            </div>
+            <table class="ts-table">
+              <thead>
+                <tr>
+                  <th>VIDEO / REEL ID</th>
+                  <th>TIÊU ĐỀ / MÔ TẢ</th>
+                  <th>LƯỢT XEM</th>
+                  <th>LƯỢT THÍCH</th>
+                  <th>BÌNH LUẬN</th>
+                  <th style="text-align:right;">XEM BÀI ĐĂNG</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="vid in (analyticsData.facebook?.videos || [])" :key="vid.id">
+                  <tr>
+                    <td class="mono" style="font-size:12px;color:var(--muted);" x-text="vid.id"></td>
+                    <td style="max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="vid.title"></td>
+                    <td class="mono"><b x-text="vid.views"></b></td>
+                    <td class="mono" x-text="vid.likes"></td>
+                    <td class="mono" x-text="vid.comments"></td>
+                    <td style="text-align:right;">
+                      <a :href="vid.permalink_url" target="_blank" class="btn btn--secondary btn--sm">Xem trên FB ↗</a>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </article>
+        </div>
+      </template>
+    </section>
+
+    <!-- =================================================================== -->
     <!-- TAB 3: API CREDENTIALS & TOKENS (2x2 taste-skill Cards)             -->
     <!-- =================================================================== -->
     <section class="sec" x-show="activeTab === 'settings'" x-cloak x-transition.opacity>
@@ -808,34 +943,82 @@
 
       <div class="g2">
 
-        <!-- 1. VBEE OFFICIAL API & VOICE DUBBING -->
+        <!-- 1. LOCAL VOICE + VBEE OFFICIAL API + HARDWARE ADVISOR -->
         <article class="card" style="gap: 16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
-              <h3>1. Lồng tiếng AI — Vbee Official API (Mặc định)</h3>
-              <p style="margin-top:4px;font-size:13.5px;">Đồng bộ từng câu thoại theo mili-giây của file SRT gốc</p>
+              <h3>1. Lồng tiếng AI — Voice Local Offline (0đ) & Vbee / Edge-TTS</h3>
+              <p style="margin-top:4px;font-size:13.5px;">Tự quét cấu hình CPU/RAM/GPU để gợi ý bộ giọng phù hợp nhất, đồng bộ từng câu theo mili-giây</p>
             </div>
-            <div style="display:flex;gap:6px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" @click="fetchHardwareAdvisor(true)" class="btn btn--secondary btn--sm">🔍 Quét Cấu Hình Máy</button>
+              <button type="button" @click="testConnection('local-tts')" class="btn btn--secondary btn--sm">Test Local</button>
               <button type="button" @click="testConnection('vbee')" class="btn btn--secondary btn--sm">Test Vbee</button>
-              <button type="button" @click="testConnection('edge-tts')" class="btn btn--secondary btn--sm">Test Edge-TTS</button>
+            </div>
+          </div>
+
+          <!-- Hardware Advisor Recommendation Banner -->
+          <div style="padding: 12px 14px; border-radius: 12px; background: color-mix(in oklab, var(--accent) 8%, var(--bg)); border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent); display: grid; gap: 8px; font-size: 12.5px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <b style="color: var(--ink);" x-text="hwAdvisor ? hwAdvisor.recommendation.headline : 'Bấm Quét Cấu Hình Máy để nhận gợi ý Voice phù hợp thông số PC'"></b>
+              <span class="ui-chip ui-chip--accent" x-text="hwAdvisor ? hwAdvisor.recommendation.tier_label : 'Auto Detect'"></span>
+            </div>
+            <div style="color: var(--muted); line-height: 1.5;" x-text="hwAdvisor ? hwAdvisor.recommendation.advice : 'Hệ thống tự kiểm tra RAM, số nhân CPU và VRAM Card rời NVIDIA để tránh đơ máy.'"></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px;">
+              <button
+                type="button"
+                @click="installLocalSherpaVoice()"
+                :disabled="isInstallingLocalTts"
+                class="btn btn--primary btn--sm"
+              >
+                <span x-text="isInstallingLocalTts ? '⏳ Đang tải model 64MB...' : (hwAdvisor?.local_backends?.sherpa_ready ? '✓ Đã cài Sherpa Tiếng Việt (Dùng ngay)' : '⬇ Tự Động Cài Giọng Local Tiếng Việt (64MB)')"></span>
+              </button>
+              <button
+                x-show="hwAdvisor"
+                type="button"
+                @click="applyRecommendedVoiceConfig()"
+                class="btn btn--secondary btn--sm"
+              >Áp dụng cấu hình khuyên dùng</button>
             </div>
           </div>
 
           <div class="g2">
             <div class="ts-field">
-              <label class="ts-label">Nhà cung cấp (TTS_PROVIDER)</label>
+              <label class="ts-label">Chế độ Giọng đọc (TTS_PROVIDER)</label>
               <select x-model="configForm.TTS_PROVIDER" class="ts-select">
-                <option value="vbee">Vbee Official API (Mặc định)</option>
-                <option value="edge-tts">Microsoft Edge-TTS (Miễn phí)</option>
+                <option value="local">🖥 Voice Local Trên Máy (Offline 100%, 0đ)</option>
+                <option value="vbee">☁ Vbee Official API (Giọng Studio 48kHz)</option>
+                <option value="edge-tts">☁ Microsoft Edge-TTS (Miễn phí cho máy yếu)</option>
               </select>
             </div>
-            <div class="ts-field">
+            <div class="ts-field" x-show="configForm.TTS_PROVIDER === 'local'">
+              <label class="ts-label">Preset Giọng Review Phim (LOCAL_TTS_ENGINE)</label>
+              <select x-model="configForm.LOCAL_TTS_ENGINE" class="ts-select">
+                <option value="gemini_nam_charon">🎬 Gemini AI Review Phim — Nam Trầm Charon 1.15x (Chuẩn Review Phim)</option>
+                <option value="gemini_nu_kore">🎬 Gemini AI Review Phim — Nữ Sắc Sảo Kore 1.15x (Chuẩn Tổng Tài)</option>
+                <option value="vieneu">🖥 VieNeu-TTS 48kHz + Clone Giọng Mẫu WAV 5s (Offline RTX GPU)</option>
+                <option value="rv_nu_kich_tinh">🖥 Sherpa ONNX 64MB — Nữ Bắc Đọc Tin (Offline nhẹ không mạng)</option>
+                <option value="custom_api">Local Server tùy chỉnh (VoiceStudio / F5-TTS)</option>
+              </select>
+            </div>
+            <div class="ts-field" x-show="configForm.TTS_PROVIDER !== 'local'">
               <label class="ts-label">Mã giọng Vbee (VBEE_VOICE_CODE)</label>
               <select x-model="configForm.VBEE_VOICE_CODE" class="ts-select">
                 <option value="hn_female_ngochuyen_full_48k-fhg">Ngọc Huyền (Nữ Hà Nội 48kHz)</option>
                 <option value="hn_male_manhdung_news_48k-fhg">Mạnh Dũng (Nam Hà Nội 48kHz)</option>
                 <option value="sg_female_thaotrinh_full_44k-phg">Thảo Trinh (Nữ Sài Gòn 44kHz)</option>
               </select>
+            </div>
+          </div>
+
+          <div class="g2" x-show="configForm.TTS_PROVIDER === 'local'">
+            <div class="ts-field">
+              <label class="ts-label">File WAV mẫu 3-5s Clone Giọng (VieNeu) <small>LOCAL_VOICE_REF_WAV</small></label>
+              <input type="text" x-model="configForm.LOCAL_VOICE_REF_WAV" placeholder="Tùy chọn: D:\voices\giong_mau.wav" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Local TTS Server URL <small>LOCAL_TTS_URL</small></label>
+              <input type="text" x-model="configForm.LOCAL_TTS_URL" placeholder="http://127.0.0.1:8001/v1/audio/speech" class="ts-input mono">
             </div>
           </div>
 
@@ -896,28 +1079,85 @@
           </div>
         </article>
 
-        <!-- 3. AI LLM TRANSLATION & SEO -->
-        <article class="card" style="gap: 16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <!-- 3. GEMINI VIDEO VISION & MULTI-KEY QUOTA POOL -->
+        <article class="card" style="grid-column: 1 / -1; gap: 16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
-              <h3>3. Mô hình AI Dịch Phụ đề 1:1 & Lọc Chính sách</h3>
-              <p style="margin-top:4px;font-size:13.5px;">Giữ nguyên số câu và mốc thời gian SRT gốc 100%</p>
+              <h3>3. Gemini Xem Trực Tiếp Video & Pool Xoay Vòng Nhiều Key / Quota Login</h3>
+              <p style="margin-top:4px;font-size:13.5px;">Gemini xem cả hình ảnh + hardsub + âm thanh để dịch tiếng Việt và tự bắt sản phẩm Shopee. Nạp nhiều Key miễn phí hoặc bật 9Router OAuth để không tốn Token Antigravity.</p>
             </div>
-            <button type="button" @click="testConnection('ai')" class="btn btn--secondary btn--sm">Test AI</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn--secondary btn--sm">🔑 Lấy Key Gemini Free (Google AI Studio) ↗</a>
+              <button type="button" @click="startLocal9Router()" class="btn btn--secondary btn--sm">🚀 Bật Cổng Quota Login (9Router OAuth)</button>
+              <button type="button" @click="testConnection('ai')" class="btn btn--primary btn--sm">Test AI / Gemini</button>
+            </div>
+          </div>
+
+          <div class="g4">
+            <div class="ts-field">
+              <label class="ts-label">Chế độ Phụ đề <small>SUBTITLE_MODE</small></label>
+              <select x-model="configForm.SUBTITLE_MODE" class="ts-select">
+                <option value="gemini_video">2 Bước: Xem Video 5p+ ➔ Dịch Sub</option>
+                <option value="whisper_asr">Whisper ASR + Dịch 1:1</option>
+              </select>
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Model Bước 1: Xem Video <small>VIDEO_VIEW_MODEL</small></label>
+              <select x-model="configForm.VIDEO_VIEW_MODEL" class="ts-select">
+                <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Chuẩn cho Video 5p+, 25+ RPM)</option>
+                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Nhanh, 15 RPM)</option>
+                <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+                <option value="gemini-3.6-flash">gemini-3.6-flash (Chỉ dùng cho clip ngắn <1p)</option>
+              </select>
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Model Bước 2: Dịch Sub <small>SUB_TRANSLATE_MODEL</small></label>
+              <select x-model="configForm.SUB_TRANSLATE_MODEL" class="ts-select">
+                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Nhanh, 15 RPM)</option>
+                <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Bể lớn 25+ RPM)</option>
+                <option value="gemma-4-26b-a4b-it">gemma-4-26b-a4b-it (Tiết kiệm quota Video)</option>
+                <option value="gemini-3.6-flash">gemini-3.6-flash (Văn phong sâu)</option>
+              </select>
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Preset Bối cảnh Mặc định <small>TRANSLATE_STYLE_PRESET</small></label>
+              <select x-model="configForm.TRANSLATE_STYLE_PRESET" class="ts-select">
+                <option value="review_tom_tat">🎬 Review / Tóm tắt phim</option>
+                <option value="tong_tai_hien_dai">💼 Tổng tài / Hiện đại</option>
+                <option value="co_trang_tien_hiep">🏯 Cổ trang / Tiên hiệp</option>
+                <option value="hoc_duong_thanh_xuan">🏫 Học đường / Thanh xuân</option>
+                <option value="gia_dinh_drama">🏠 Gia đình / Đời sống</option>
+              </select>
+            </div>
           </div>
 
           <div class="ts-field">
-            <label class="ts-label">AI Base URL Endpoint <small>AI_BASE_URL</small></label>
-            <input type="text" x-model="configForm.AI_BASE_URL" placeholder="https://api.shopaikey.com/v1" class="ts-input mono">
+            <label class="ts-label">Custom Prompt Dịch Phụ Đề & Quy Tắc Xưng Hô Chung (Áp dụng cho mọi video 5p+) <small>CUSTOM_TRANSLATE_PROMPT</small></label>
+            <textarea rows="2" x-model="configForm.CUSTOM_TRANSLATE_PROMPT" placeholder="Nhập hướng dẫn bối cảnh, văn phong review phim, cách xưng hô cố định giữa các tuyến nhân vật để không bao giờ dịch nhầm vai..." class="ts-textarea"></textarea>
           </div>
 
           <div class="g2">
             <div class="ts-field">
-              <label class="ts-label">Tên Model <small>AI_MODEL</small></label>
-              <input type="text" x-model="configForm.AI_MODEL" placeholder="gpt-4o-mini" class="ts-input mono">
+              <label class="ts-label">Pool Google AI Studio Gemini Keys (Mỗi dòng 1 mã AIza...) <small>GEMINI_API_KEYS</small></label>
+              <textarea rows="3" x-model="configForm.GEMINI_API_KEYS" placeholder="AIzaSy... (Tài khoản Gmail 1)&#10;AIzaSy... (Tài khoản Gmail 2)&#10;-> Tự xoay vòng khi hết quota!" class="ts-textarea mono"></textarea>
             </div>
             <div class="ts-field">
-              <label class="ts-label">AI API Key <small>AI_API_KEY</small></label>
+              <label class="ts-label">Pool Đa Nguồn Dự Phòng (Groq gsk_ / OpenRouter sk-or- / Endpoint|Key|Model) <small>AI_KEY_POOL</small></label>
+              <textarea rows="3" x-model="configForm.AI_KEY_POOL" placeholder="gsk_...&#10;sk-or-v1-...&#10;https://api.shopaikey.com/v1|sk-...|gemini-2.5-flash-lite" class="ts-textarea mono"></textarea>
+            </div>
+          </div>
+
+          <div class="g3">
+            <div class="ts-field">
+              <label class="ts-label">AI Base URL Chính <small>AI_BASE_URL</small></label>
+              <input type="text" x-model="configForm.AI_BASE_URL" placeholder="https://api.shopaikey.com/v1" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Model Văn Bản Mặc Định <small>AI_MODEL</small></label>
+              <input type="text" x-model="configForm.AI_MODEL" placeholder="gemini-2.5-flash-lite" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">AI API Key Chính <small>AI_API_KEY</small></label>
               <input type="password" x-model="configForm.AI_API_KEY" placeholder="sk-..." class="ts-input mono">
             </div>
           </div>
@@ -970,10 +1210,14 @@
             <button type="button" @click="testConnection('shopee')" class="btn btn--secondary btn--sm">Test Shopee Affiliate</button>
           </div>
 
-          <div class="g3">
+          <div class="g4">
             <div class="ts-field">
-              <label class="ts-label">Shopee Sub-ID / Affiliate ID <small>SHOPEE_SUB_ID</small></label>
-              <input type="text" x-model="configForm.SHOPEE_SUB_ID" placeholder="16550927460" class="ts-input mono">
+              <label class="ts-label">Shopee Affiliate ID <small>SHOPEE_AFFILIATE_ID</small></label>
+              <input type="text" x-model="configForm.SHOPEE_AFFILIATE_ID" placeholder="17374600599" class="ts-input mono">
+            </div>
+            <div class="ts-field">
+              <label class="ts-label">Sub-ID Chiến dịch <small>SHOPEE_SUB_ID</small></label>
+              <input type="text" x-model="configForm.SHOPEE_SUB_ID" placeholder="kenh71" class="ts-input mono">
             </div>
             <div class="ts-field">
               <label class="ts-label">Shopee Open API App ID <small>SHOPEE_APP_ID</small></label>
@@ -987,16 +1231,19 @@
 
           <div class="g3">
             <div class="ts-field">
-              <label class="ts-label">Shopee Cookie <small>SHOPEE_COOKIE</small></label>
-              <input type="password" x-model="configForm.SHOPEE_COOKIE" placeholder="SPC_U=...; _sapid=..." class="ts-input mono">
+              <label class="ts-label">Shopee Cookie (JSON hoặc chuỗi) <small>SHOPEE_COOKIE</small></label>
+              <textarea rows="2" x-model="configForm.SHOPEE_COOKIE" placeholder='Dán mảng JSON Cookie-Editor [...] hoặc SPC_ST=...; SPC_F=...' class="ts-textarea mono"></textarea>
             </div>
             <div class="ts-field">
-              <label class="ts-label">TikTok Webhook URL</label>
-              <input type="text" x-model="configForm.TIKTOK_WEBHOOK_URL" placeholder="https://n8n.yourdomain.com/webhook/..." class="ts-input mono">
+              <label class="ts-label">TikTok Cookie JSON / Session <small>TIKTOK_COOKIES</small></label>
+              <textarea rows="2" x-model="configForm.TIKTOK_COOKIES" placeholder='Dán mảng JSON Cookie-Editor TikTok [...] hoặc sessionid=...' class="ts-textarea mono"></textarea>
             </div>
             <div class="ts-field">
-              <label class="ts-label">TikTok Session ID</label>
-              <input type="password" x-model="configForm.TIKTOK_SESSION_ID" placeholder="sessionid=..." class="ts-input mono">
+              <label class="ts-label">TikTok Webhook & Kiểm tra <small>TIKTOK_WEBHOOK_URL</small></label>
+              <div style="display:flex;gap:8px;">
+                <input type="text" x-model="configForm.TIKTOK_WEBHOOK_URL" placeholder="Tùy chọn Webhook n8n..." class="ts-input mono" style="flex:1;">
+                <button type="button" @click="testConnection('tiktok')" class="btn btn--secondary btn--sm" style="height:42px;">Test TikTok</button>
+              </div>
             </div>
           </div>
 
@@ -1007,7 +1254,7 @@
                 <div style="font-weight: 560; font-size: 14px;">Bộ kiểm thử & Tạo Link Shopee Affiliate trực tiếp (Agent 7)</div>
                 <div style="font-size: 12.5px; color: var(--muted);">Nhập tên sản phẩm (VD: <span class="mono">quạt tích điện mini</span>) hoặc link Shopee gốc để kiểm tra kết quả trả về của Affiliate Agent.</div>
               </div>
-              <span class="ui-chip ui-chip--accent">Sub-ID: <span class="mono" x-text="configForm.SHOPEE_SUB_ID || '16550927460'"></span></span>
+              <span class="ui-chip ui-chip--accent">Affiliate ID: <span class="mono" x-text="configForm.SHOPEE_AFFILIATE_ID || '17374600599'"></span> • Sub-ID: <span class="mono" x-text="configForm.SHOPEE_SUB_ID || 'kenh71'"></span></span>
             </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1085,6 +1332,52 @@
     <span>Reup Automation Studio • Built with leonxlnx/taste-skill design system</span>
     <span class="mono">Vbee Official API v1 • AppID 63a47dd0-f273-4b4a-a9bf-ae354f38b554</span>
   </footer>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 0: FIRST-LAUNCH ACCOUNT & HWID CLOUD SYNC ONBOARDING            -->
+  <!-- ===================================================================== -->
+  <div x-show="showOnboardingModal" x-cloak class="ts-modal-backdrop" x-transition.opacity>
+    <article class="card" style="width: 100%; max-width: 520px; gap: 16px;">
+      <div>
+        <span class="ui-chip ui-chip--accent">Kích hoạt lần đầu • 1 Tài khoản / 1 Máy</span>
+        <h3 style="margin-top: 10px;">Chào mừng đến với Reup Automation Studio</h3>
+        <p style="margin-top: 4px; font-size: 13.5px;">Nhập Gmail của bạn để hệ thống tự động đăng ký với <b>Mã Vân Tay Máy</b>. Toàn bộ video và tiến trình của bạn được lưu riêng tư 100% ngay trên máy tính này.</p>
+      </div>
+
+      <div style="padding: 10px 14px; border-radius: 10px; background: color-mix(in oklab, var(--ink) 4%, var(--bg)); border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent); display: flex; justify-content: space-between; align-items: center; font-size: 12.5px;">
+        <span style="color: var(--muted);">Mã vân tay phần cứng (HWID):</span>
+        <b class="mono" style="color: var(--accent);" x-text="licenseInfo?.current_hwid || 'Đang quét...'"></b>
+      </div>
+
+      <div class="ts-field">
+        <label class="ts-label">Gmail kích hoạt tài khoản *</label>
+        <input type="email" x-model="onboardingForm.email" placeholder="tenban@gmail.com" class="ts-input mono">
+      </div>
+
+      <div class="g2">
+        <div class="ts-field">
+          <label class="ts-label">Tên hiển thị / Tên Kênh</label>
+          <input type="text" x-model="onboardingForm.name" placeholder="VD: Minh Review" class="ts-input">
+        </div>
+        <div class="ts-field">
+          <label class="ts-label">Mã Bản Quyền (Nếu có)</label>
+          <input type="text" x-model="onboardingForm.license_key" placeholder="Để trống = Bản Dùng Thử" class="ts-input mono">
+        </div>
+      </div>
+
+      <div class="ts-field">
+        <label class="ts-label">
+          <span>Dán nhanh 1 mã Gemini API Free (Tùy chọn)</span>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent); font-size: 12px;">Lấy mã miễn phí 5s ↗</a>
+        </label>
+        <input type="password" x-model="onboardingForm.gemini_api_key" placeholder="AIzaSy... (Có thể bổ sung sau trong mục Token & Quota)" class="ts-input mono">
+      </div>
+
+      <button type="button" @click="submitFirstLaunchOnboarding()" :disabled="isRegisteringDevice || !onboardingForm.email.trim()" class="btn btn--primary" style="width: 100%; height: 46px; font-weight: 600;">
+        <span x-text="isRegisteringDevice ? 'Đang đăng ký vân tay máy...' : '🚀 Lưu Tài Khoản & Bắt Đầu Sử Dụng Ngay'">🚀 Lưu Tài Khoản & Bắt Đầu Sử Dụng Ngay</span>
+      </button>
+    </article>
+  </div>
 
   <!-- ===================================================================== -->
   <!-- MODAL 1: INLINE VIDEO & SYNCHRONIZED SRT TIMECODE INSPECTOR           -->

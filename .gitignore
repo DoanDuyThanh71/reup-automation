@@ -27,11 +27,21 @@ ENV/
 
 # Database & Storage
 data/
+website/data/
 outputs/
 temp/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
+
+# Node / Remotion build artifacts
+node_modules/
+promo_video/node_modules/
+promo_video/.remotion/
+promo_video/public/_*/
+promo_video/public/_tmp*
 
 # Credentials & environment
 .env
@@ -41,11 +51,13 @@ vbee_cookies.txt
 douyin_cookies.txt
 shopee_cookies.txt
 
-# Media files
+# Media files (except official website promo video & voice audition demos)
 *.mp4
 *.mp3
 *.wav
 *.m4a
+!website/static/promo_tutorial.mp4
+!website/demos/*.mp3
 
 # IDE
 .vscode/

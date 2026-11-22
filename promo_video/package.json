@@ -1,0 +1,20 @@
+{
+  "name": "reup-studio-promo-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Programmatic SaaS Promo & Quick-Start Tutorial Video built with Remotion (Claude remotion-dev/skills architecture)",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts ReupPromo ../website/static/promo_tutorial.mp4 --codec=h264"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.242",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.242"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}

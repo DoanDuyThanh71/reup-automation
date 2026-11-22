@@ -1,7 +1,10 @@
 import os
 import uuid
 import asyncio
+import concurrent.futures
 import requests
+
+BATCH_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -12,7 +15,7 @@ from sqlalchemy.orm import Session
 from .database import get_db, Base, engine
 from .models import (
     JobModel, LogModel, JobCreate, BatchJobCreate, JobResponse,
-    ConfigUpdate, TestConnectionRequest, AffiliateVerifyRequest, ManualPublishRequest
+    ConfigUpdate, TestConnectionRequest, AffiliateVerifyRequest, ManualPublishRequest, DeviceRegisterRequest
 )
 from .config import config
 from .agents.orchestrator import orchestrator
@@ -21,6 +24,12 @@ from .services.ai_client import AIClient
 from .services.vbee_client import VbeeClient
 from .services.edge_tts_client import EdgeTTSClient
 from .services.shopee_client import ShopeeAffiliateClient
+from .services.tiktok_client import TikTokClient
+from .services.quota_pool import QuotaPoolManager
+from .services.analytics_service import AnalyticsService
+from .services.local_tts_client import LocalTTSClient
+from .services.hardware_advisor import HardwareAdvisor
+from .services.license_client import MachineLicenseClient
 
 # Initialize SQLite tables
 Base.metadata.create_all(bind=engine)
@@ -98,8 +107,10 @@ def create_job(payload: JobCreate, background_tasks: BackgroundTasks, db: Sessio
         job_id=job_id,
         custom_product_hint=payload.custom_product_hint,
         voice_code=payload.voice_code,
-        auto_post_fb=payload.auto_post_facebook or False,
-        auto_post_tt=payload.auto_post_tiktok or False
+        auto_post_fb=payload.auto_post_facebook,
+        auto_post_tt=payload.auto_post_tiktok,
+        custom_translate_prompt=payload.custom_translate_prompt,
+        translate_style_preset=payload.translate_style_preset,
     )
 
     return new_job.to_dict()
@@ -125,13 +136,15 @@ def create_batch_jobs(payload: BatchJobCreate, background_tasks: BackgroundTasks
         db.refresh(new_job)
         created_jobs.append(new_job.to_dict())
 
-        background_tasks.add_task(
+        BATCH_EXECUTOR.submit(
             orchestrator.execute_pipeline,
-            job_id=job_id,
-            custom_product_hint=payload.custom_product_hint,
-            voice_code=payload.voice_code,
-            auto_post_fb=payload.auto_post_facebook or False,
-            auto_post_tt=payload.auto_post_tiktok or False
+            job_id,
+            payload.custom_product_hint,
+            payload.voice_code,
+            payload.auto_post_facebook,
+            payload.auto_post_tiktok,
+            payload.custom_translate_prompt,
+            payload.translate_style_preset,
         )
 
     return {
@@ -145,13 +158,17 @@ def verify_and_generate_affiliate(payload: AffiliateVerifyRequest):
     kw_or_url = (payload.keyword_or_url or "").strip()
     if not kw_or_url:
         raise HTTPException(status_code=400, detail="Vui lòng nhập từ khóa sản phẩm hoặc link Shopee")
+
+    orchestrator.affiliate_agent.refresh_client()
     if payload.sub_id:
         orchestrator.affiliate_agent.client.sub_id = payload.sub_id.strip()
+    if payload.affiliate_id:
+        orchestrator.affiliate_agent.client.affiliate_id = payload.affiliate_id.strip()
 
     if kw_or_url.startswith("http://") or kw_or_url.startswith("https://"):
-        res = orchestrator.affiliate_agent.run(product_keyword="Sản phẩm Shopee", existing_link=kw_or_url, job_id="manual")
+        res = orchestrator.affiliate_agent.run(product_keyword="Sản phẩm Shopee", existing_link=kw_or_url, job_id="manual", refresh=False)
     else:
-        res = orchestrator.affiliate_agent.run(product_keyword=kw_or_url, existing_link=None, job_id="manual")
+        res = orchestrator.affiliate_agent.run(product_keyword=kw_or_url, existing_link=None, job_id="manual", refresh=False)
     return res
 
 @app.post("/api/jobs/{job_id}/verify-affiliate")
@@ -359,16 +376,86 @@ def test_connection(payload: TestConnectionRequest):
         tts = EdgeTTSClient()
         return tts.test_connection()
 
+    elif target == "local-tts":
+        local_tts = LocalTTSClient(
+            engine=params.get("engine"),
+            custom_url=params.get("custom_url"),
+            ref_wav=params.get("ref_wav"),
+        )
+        return local_tts.test_connection()
+
     elif target == "shopee":
         shopee = ShopeeAffiliateClient(
             cookie=params.get("cookie"),
             sub_id=params.get("sub_id"),
             app_id=params.get("app_id"),
-            app_secret=params.get("app_secret")
+            app_secret=params.get("app_secret"),
+            affiliate_id=params.get("affiliate_id"),
         )
-        return shopee.test_connection()
+        res = shopee.test_connection()
+        if res.get("success") and res.get("affiliate_id"):
+            config.set("SHOPEE_AFFILIATE_ID", res["affiliate_id"])
+        return res
+
+    elif target == "tiktok":
+        tt = TikTokClient(
+            cookie_or_session=params.get("cookies") or params.get("session_id"),
+            webhook_url=params.get("webhook_url"),
+        )
+        return tt.verify_account()
 
     raise HTTPException(status_code=400, detail=f"Mục tiêu kiểm tra '{target}' không hợp lệ")
+
+
+# ==========================================
+# REST API: Analytics & Quota Pool
+# ==========================================
+
+@app.get("/api/analytics")
+def get_analytics(db: Session = Depends(get_db)):
+    svc = AnalyticsService()
+    return svc.collect_dashboard_analytics(db)
+
+
+@app.get("/api/quota/status")
+def get_quota_status():
+    return QuotaPoolManager.detect_local_quota_gateways()
+
+
+@app.post("/api/quota/start-9router")
+def start_quota_router():
+    return QuotaPoolManager.start_local_9router()
+
+
+@app.get("/api/hardware/tts-advisor")
+def get_hardware_tts_advisor():
+    return HardwareAdvisor.inspect_and_recommend()
+
+
+@app.post("/api/local-tts/install")
+def install_local_tts_model():
+    return LocalTTSClient.install_sherpa_vietnamese()
+
+
+@app.get("/api/license/status")
+def get_license_status():
+    return MachineLicenseClient.get_registration_status()
+
+
+@app.post("/api/license/register")
+def register_client_device(payload: DeviceRegisterRequest):
+    if payload.gemini_api_key and payload.gemini_api_key.strip():
+        from .services.quota_pool import is_google_native_key
+        gk = payload.gemini_api_key.strip()
+        if is_google_native_key(gk):
+            config.set("GEMINI_API_KEYS", gk)
+        else:
+            config.set("AI_API_KEY", gk)
+    return MachineLicenseClient.register_first_launch(
+        email=payload.email,
+        name=payload.name or "",
+        license_key=payload.license_key or "",
+    )
 
 # ==========================================
 # REST API: Health & Stats
@@ -422,10 +509,14 @@ async def websocket_logs(websocket: WebSocket):
         manager.disconnect(websocket)
 
 # ==========================================
-# Static Files & Dashboard UI
+# Static Files & Dashboard UI (Supports both Python & PyInstaller .exe)
 # ==========================================
+import sys as _sys
 
-STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if hasattr(_sys, "_MEIPASS"):
+    STATIC_DIR = os.path.join(_sys._MEIPASS, "app", "static")
+else:
+    STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

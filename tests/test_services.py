@@ -111,7 +111,13 @@ def test_douyin_extract_url_from_share_text(db_session):
     assert extracted == "https://v.douyin.com/iY8AbCd/"
 
 def test_shopee_affiliate_search_and_convert(db_session):
-    shopee = ShopeeAffiliateClient(cookie="SPC_U=1", sub_id="998877", app_id="", app_secret="")
+    shopee = ShopeeAffiliateClient(
+        cookie="SPC_U=1",
+        sub_id="998877",
+        affiliate_id="17374600599",
+        app_id="",
+        app_secret="",
+    )
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {
         "items": [{"item_basic": {"itemid": 112233, "shopid": 4455, "name": "Quạt mini cầm tay"}}]
@@ -121,9 +127,43 @@ def test_shopee_affiliate_search_and_convert(db_session):
         url = shopee.search_product("quạt mini")
         assert "i.4455.112233" in url
         aff_link = shopee.convert_to_affiliate_link(url)
+        assert "s.shopee.vn/an_redir" in aff_link
+        assert "affiliate_id=17374600599" in aff_link
         assert "sub_id=998877" in aff_link
         check = shopee.verify_affiliate_link(aff_link, product_keyword="quạt mini")
         assert check["valid"] is True
+
+
+def test_shopee_cookie_json_array_parser_and_profile(db_session):
+    json_cookies = json.dumps([
+        {"domain": ".shopee.vn", "name": "SPC_U", "value": "16550927460"},
+        {"domain": ".shopee.vn", "name": "SPC_ST", "value": "token_abc"},
+        {"domain": ".shopee.vn", "name": "csrftoken", "value": "csrf_123"},
+        {"domain": "affiliate.shopee.vn", "name": "_sapid", "value": "sap_456"},
+    ])
+    shopee = ShopeeAffiliateClient(cookie=json_cookies, sub_id="kenh71")
+    assert "SPC_ST=token_abc" in shopee.cookie
+    assert shopee.cookie_dict["csrftoken"] == "csrf_123"
+    assert "\n" not in shopee.cookie
+
+    mock_prof = MagicMock(status_code=200)
+    mock_prof.json.return_value = {
+        "code": 0,
+        "msg": "success",
+        "data": {
+            "affiliate_id": "17374600599",
+            "user_id": "16550927460",
+            "shopee_user_name": "doanduythanh71",
+            "nick_name": "Thành",
+            "social_media_info": [{"user_name": "Kênh 71"}],
+        },
+    }
+    with patch("requests.get", return_value=mock_prof):
+        prof = shopee.fetch_affiliate_profile(force_refresh=True)
+        assert prof is not None
+        assert prof["affiliate_id"] == "17374600599"
+        assert prof["shopee_user_name"] == "doanduythanh71"
+        assert shopee.affiliate_id == "17374600599"
 
 def test_shopee_open_api_signature_and_affiliate_agent(db_session):
     from app.agents.affiliate_agent import AffiliateAgent
@@ -144,3 +184,65 @@ def test_edge_tts_extract_clean_text_from_srt():
     srt = "1\n00:00:01,000 --> 00:00:03,000\nXin chào các bạn.\n\n2\n00:00:03,500 --> 00:00:05,000\nĐây là sản phẩm mới.\n"
     text = EdgeTTSClient.extract_clean_text_from_srt(srt)
     assert text == "Xin chào các bạn. Đây là sản phẩm mới."
+
+
+# ==========================================
+# 5. Security Fingerprint, TikTok & Quota Pool Tests
+# ==========================================
+
+def test_security_vault_encryption_and_fingerprints():
+    from app.services.security_fingerprint import SecurityFingerprintManager
+
+    raw_secret = "EAA_SUPER_SECRET_TOKEN_123456"
+    enc = SecurityFingerprintManager.encrypt_secret(raw_secret)
+    assert enc.startswith("ENC:v1:")
+    assert raw_secret not in enc
+    dec = SecurityFingerprintManager.decrypt_secret(enc)
+    assert dec == raw_secret
+
+    fp1 = SecurityFingerprintManager.secret_fingerprint(raw_secret)
+    fp2 = SecurityFingerprintManager.secret_fingerprint(raw_secret)
+    assert fp1 == fp2 and fp1.startswith("fp:")
+
+    bfp = SecurityFingerprintManager.get_browser_fingerprint("uid_tt_test")
+    assert bfp["fingerprint_id"].startswith("bfp-")
+    assert "Chrome/" in bfp["ua"]
+
+    vfp = SecurityFingerprintManager.get_video_anti_detect_params("job_abc")
+    assert "eq=contrast=" in vfp["vf_snippet"]
+
+
+def test_tiktok_cookie_json_parser_and_verify(db_session):
+    from app.services.tiktok_client import TikTokClient
+
+    raw_tt = json.dumps([
+        {"domain": ".tiktok.com", "name": "sessionid", "value": "956b1c7c69619d11", "sameSite": None, "secure": True},
+        {"domain": ".tiktok.com", "name": "uid_tt", "value": "uid_999", "sameSite": "no_restriction", "secure": True},
+    ])
+    tt = TikTokClient(cookie_or_session=raw_tt)
+    assert "sessionid=956b1c7c69619d11" in tt.cookie_str
+    assert len(tt.playwright_cookies) == 2
+    assert tt.playwright_cookies[1]["sameSite"] == "None"
+
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = {
+        "data": {"username": "tra_sua_nuong_71", "screen_name": "N1 Đoàn Duy Thành", "user_id_str": "73029"}
+    }
+    with patch("requests.get", return_value=mock_resp):
+        acc = tt.verify_account()
+        assert acc["success"] is True
+        assert acc["username"] == "tra_sua_nuong_71"
+
+
+def test_facebook_page_id_markdown_sanitizer():
+    clean = FacebookPublisher.sanitize_page_id("[1058364167367881](https://developers.facebook.com/tools/explorer/)")
+    assert clean == "1058364167367881"
+
+
+def test_hardware_tts_advisor_tiers():
+    from app.services.hardware_advisor import HardwareAdvisor
+
+    res = HardwareAdvisor.inspect_and_recommend()
+    assert "hardware" in res and "recommendation" in res
+    assert res["recommendation"]["tier"] in ("ULTRA_GPU", "MID_GPU", "CPU_GOOD", "LOW_SPEC")
+    assert res["recommendation"]["recommended_tts_provider"] in ("local", "edge-tts", "vbee")

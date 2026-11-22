@@ -1,21 +1,31 @@
 import os
 import shutil
+import hashlib
 import subprocess
 from typing import Dict, Any
-from ..config import get_ffmpeg_exe
+from ..config import get_ffmpeg_exe, config
+from ..services.security_fingerprint import SecurityFingerprintManager
+
 
 class RenderAgent:
     """
-    Agent 5: Merges dubbed audio and burns stylized Vietnamese subtitles into video.
-    Uses relative subtitle filename inside working directory to prevent Windows drive-letter,
-    whitespace, and Unicode path escaping failures in FFmpeg libass.
+    Agent 5: Merges dubbed audio, burns stylized Vietnamese subtitles, and applies
+    imperceptible Anti-Duplicate Video Fingerprinting (metadata stripping, unique UUID,
+    micro-crop/color transform) so every exported MP4 has a clean, unique signature.
     """
     def escape_ffmpeg_path(self, path: str) -> str:
-        """Escapes Windows and Linux file paths for FFmpeg filter_complex."""
         clean = path.replace("\\", "/")
         clean = clean.replace(":", "\\:")
         clean = clean.replace("'", "'\\''")
         return clean
+
+    @staticmethod
+    def _file_sha256_short(path: str) -> str:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(262144), b""):
+                h.update(chunk)
+        return f"vfp:{h.hexdigest()[:12]}"
 
     def run(self, input_video_path: str, dubbed_audio_path: str, srt_path: str, output_video_path: str) -> Dict[str, Any]:
         abs_in_video = os.path.abspath(input_video_path)
@@ -26,7 +36,6 @@ class RenderAgent:
         work_dir = os.path.dirname(abs_out_video)
         os.makedirs(work_dir, exist_ok=True)
 
-        # Ensure a clean ASCII filename for SRT inside work_dir so libass never fails on Unicode/colons
         local_srt_name = "_burn_sub.srt"
         local_srt_path = os.path.join(work_dir, local_srt_name)
         if os.path.exists(abs_srt) and os.path.abspath(abs_srt) != os.path.abspath(local_srt_path):
@@ -35,23 +44,30 @@ class RenderAgent:
             local_srt_name = os.path.basename(abs_srt)
 
         ffmpeg_bin = get_ffmpeg_exe()
+        use_fp = config.get_bool("VIDEO_FINGERPRINT_PROTECTION", True)
+        fp_params = SecurityFingerprintManager.get_video_anti_detect_params(os.path.basename(abs_out_video))
 
-        # High-visibility subtitle styling (Yellow bold text with black outline)
         style = (
             "FontSize=16,"
             "FontName=Arial,"
             "Bold=1,"
-            "PrimaryColour=&H0000FFFF&,"   # Bright Yellow in BGR hex
-            "OutlineColour=&H00000000&,"   # Black Outline
+            "PrimaryColour=&H0000FFFF&,"
+            "OutlineColour=&H00000000&,"
             "BorderStyle=1,"
             "Outline=2.5,"
             "Shadow=1,"
-            "Alignment=2,"                 # Bottom Center
+            "Alignment=2,"
             "MarginV=35"
         )
 
+        v_chain = (
+            f"{fp_params['vf_snippet']},subtitles='{local_srt_name}':force_style='{style}'"
+            if use_fp
+            else f"subtitles='{local_srt_name}':force_style='{style}'"
+        )
+
         filter_str = (
-            f"[0:v]subtitles='{local_srt_name}':force_style='{style}'[v];"
+            f"[0:v]{v_chain}[v];"
             f"[0:a]volume=0.12[a_orig];"
             f"[1:a]volume=1.35[a_dub];"
             f"[a_orig][a_dub]amix=inputs=2:duration=first:dropout_transition=2[a]"
@@ -61,6 +77,8 @@ class RenderAgent:
             ffmpeg_bin, "-y",
             "-i", abs_in_video,
             "-i", abs_dub_audio,
+            "-map_metadata", "-1",
+            "-metadata", f"comment=media_id:{fp_params['media_uuid']}",
             "-filter_complex", filter_str,
             "-map", "[v]",
             "-map", "[a]",
@@ -79,7 +97,9 @@ class RenderAgent:
             return {
                 "success": True,
                 "output_video_path": abs_out_video,
-                "file_size": os.path.getsize(abs_out_video)
+                "file_size": os.path.getsize(abs_out_video),
+                "video_fingerprint": self._file_sha256_short(abs_out_video),
+                "media_uuid": fp_params["media_uuid"],
             }
         except subprocess.CalledProcessError as e:
             err = e.stderr.decode("utf-8", errors="ignore") if e.stderr else str(e)
@@ -88,6 +108,8 @@ class RenderAgent:
                 ffmpeg_bin, "-y",
                 "-i", abs_in_video,
                 "-i", abs_dub_audio,
+                "-map_metadata", "-1",
+                "-metadata", f"comment=media_id:{fp_params['media_uuid']}",
                 "-c:v", "copy",
                 "-map", "0:v:0",
                 "-map", "1:a:0",
@@ -99,5 +121,6 @@ class RenderAgent:
                 "success": True,
                 "output_video_path": abs_out_video,
                 "file_size": os.path.getsize(abs_out_video),
+                "video_fingerprint": self._file_sha256_short(abs_out_video),
                 "warning": "Đã render video không burn sub do thiếu thư viện libass trên FFmpeg."
             }

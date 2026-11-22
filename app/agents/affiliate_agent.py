@@ -17,8 +17,9 @@ class AffiliateAgent:
     def refresh_client(self):
         self.client = ShopeeAffiliateClient()
 
-    def run(self, product_keyword: str, existing_link: Optional[str] = None, job_id: str = "reup") -> Dict[str, Any]:
-        self.refresh_client()
+    def run(self, product_keyword: str, existing_link: Optional[str] = None, job_id: str = "reup", refresh: bool = True) -> Dict[str, Any]:
+        if refresh:
+            self.refresh_client()
         kw = (product_keyword or "đồ gia dụng thông minh").strip()
         campaign_tag = f"job_{job_id[:8]}"
 
@@ -44,7 +45,8 @@ class AffiliateAgent:
             "origin_url": candidate_url,
             "affiliate_link": affiliate_link,
             "universal_redirect_link": verification.get("universal_redirect_link", affiliate_link),
-            "method": verification.get("method", "attributed_deeplink"),
+            "method": verification.get("method", "s.shopee.vn/an_redir"),
+            "affiliate_id": verification.get("affiliate_id", self.client.affiliate_id),
             "sub_id": verification.get("sub_id", self.client.sub_id),
             "is_short_link": verification.get("is_short_link", False),
             "verification": verification

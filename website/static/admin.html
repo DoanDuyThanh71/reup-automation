@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="vi" data-ground="sage" data-radius="soft" data-buttons="pill">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="site-kind" content="software">
+  <title>Quản trị Thiết bị HWID &amp; Đơn hàng — Reup Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/system.css">
+  <link rel="stylesheet" href="assets/ui/cards.css">
+  <style>
+    :root {
+      --p-bg: #070708; --p-surface: #141416; --p-ink: #f2f2ef; --p-muted: #9a9a95;
+      --p-accent: #dafa9c; --p-accent-ink: #0a0c06; --p-action: #dafa9c; --p-action-ink: #0a0c06;
+      --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+      --font-text: "Plus Jakarta Sans", system-ui, sans-serif;
+      --font-mono: "Geist Mono", monospace;
+    }
+    main > section { height: auto !important; min-height: 100svh; }
+    table.adm-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.adm-tbl th, table.adm-tbl td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line); }
+    table.adm-tbl th { color: var(--muted); font-weight: 500; font-size: 13px; }
+    .adm-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 24px; }
+    .adm-input { height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); min-width: 260px; }
+    .tag { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--line-strong); }
+    .tag--pro { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+    .tag--lock { background: #ef4444; color: #fff; border-color: transparent; }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav__bar">
+      <a class="nav__logo" href="/"><span class="mark" data-mark="stack" aria-hidden="true"></span> Reup Studio Admin</a>
+      <div class="nav__actions" style="margin-left: auto;">
+        <a class="btn btn--secondary btn--sm" href="/">Về trang chủ</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="wrap stack-6">
+        <div class="stack-2">
+          <h1>Quản lý Vân tay máy HWID, Gmail Dùng thử &amp; Vé Meet 50k</h1>
+          <p class="muted">Mọi máy chạy ReupAutomationStudio.exe khi mở lần đầu sẽ tự động gửi Gmail + HWID về bảng này.</p>
+        </div>
+
+        <div class="adm-bar">
+          <input class="adm-input" type="password" id="adminSecretInput" placeholder="Nhập PORTAL_ADMIN_SECRET (mặc định: reup-admin-2026)">
+          <button class="btn btn--primary btn--sm" type="button" id="loadAdminBtn">Tải dữ liệu thực tế</button>
+          <span class="t-small muted" id="adminStatus"></span>
+        </div>
+
+        <div class="grid" id="statsRow" hidden>
+          <div class="card span-3"><span class="muted t-small">Thiết bị .EXE đã gắn HWID</span><strong class="t-stat" id="cntDevices">0</strong></div>
+          <div class="card span-3"><span class="muted t-small">Máy đang mở khóa PRO</span><strong class="t-stat" id="cntPro">0</strong></div>
+          <div class="card span-3"><span class="muted t-small">Gmail nhận Key trên Web</span><strong class="t-stat" id="cntLeads">0</strong></div>
+          <div class="card span-3"><span class="muted t-small">Đơn đăng ký Meet 50k / Pro</span><strong class="t-stat" id="cntOrders">0</strong></div>
+        </div>
+
+        <div class="card stack-4">
+          <h3>1. Danh sách máy khách hàng (.EXE HWID)</h3>
+          <div style="overflow-x: auto;">
+            <table class="adm-tbl">
+              <thead>
+                <tr><th>HWID</th><th>Gmail</th><th>Cấu hình GPU / RAM</th><th>Gói</th><th>Trạng thái</th><th>Hành động từ xa</th></tr>
+              </thead>
+              <tbody id="devicesBody"><tr><td colspan="6" class="muted">Nhập mã quản trị để xem danh sách.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card stack-4">
+          <h3>2. Đơn đăng ký Vé Meet 50.000đ &amp; Khóa Pro</h3>
+          <div style="overflow-x: auto;">
+            <table class="adm-tbl">
+              <thead>
+                <tr><th>Mã đơn</th><th>Loại</th><th>Số tiền</th><th>Gmail &amp; Zalo</th><th>Trạng thái</th><th>Xác nhận</th></tr>
+              </thead>
+              <tbody id="ordersBody"><tr><td colspan="6" class="muted">Chưa tải dữ liệu.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card stack-4">
+          <h3>3. Gmail nhận Key dùng thử từ Trang chủ</h3>
+          <div style="overflow-x: auto;">
+            <table class="adm-tbl">
+              <thead>
+                <tr><th>Thời gian</th><th>Gmail</th><th>Mã kích hoạt đã cấp</th><th>IP</th></tr>
+              </thead>
+              <tbody id="leadsBody"><tr><td colspan="4" class="muted">Chưa tải dữ liệu.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    const secretEl = document.getElementById('adminSecretInput');
+    const statusEl = document.getElementById('adminStatus');
+    secretEl.value = sessionStorage.getItem('rs_adm_sec') || 'reup-admin-2026';
+
+    async function loadData() {
+      const secret = secretEl.value.trim();
+      sessionStorage.setItem('rs_adm_sec', secret);
+      statusEl.textContent = 'Đang tải...';
+      const res = await fetch('/api/v1/admin/overview', { headers: { 'x-admin-secret': secret } });
+      if (!res.ok) {
+        statusEl.textContent = 'Sai mã quản trị (PORTAL_ADMIN_SECRET).';
+        return;
+      }
+      const d = await res.json();
+      statusEl.textContent = 'Đã cập nhật lúc ' + new Date().toLocaleTimeString('vi-VN');
+      document.getElementById('statsRow').hidden = false;
+      document.getElementById('cntDevices').textContent = d.counts.devices;
+      document.getElementById('cntPro').textContent = d.counts.pro_devices;
+      document.getElementById('cntLeads').textContent = d.counts.leads;
+      document.getElementById('cntOrders').textContent = d.counts.orders;
+
+      const devBody = document.getElementById('devicesBody');
+      devBody.innerHTML = d.devices.length ? d.devices.map(r => `
+        <tr>
+          <td class="mono">${r.hwid}</td>
+          <td>${r.email}</td>
+          <td>${r.gpu_name || 'CPU'} · ${r.ram_gb || 0}GB</td>
+          <td><span class="tag ${r.plan === 'PRO' ? 'tag--pro' : ''}">${r.plan}</span></td>
+          <td>${r.is_blocked ? '<span class="tag tag--lock">Đã khóa</span>' : 'Hoạt động'}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn--secondary btn--sm" data-hwid="${r.hwid}" data-plan="${r.plan === 'PRO' ? 'FREE_TRIAL' : 'PRO'}">${r.plan === 'PRO' ? 'Hạ Trial' : 'Nâng PRO'}</button>
+            <button class="btn btn--secondary btn--sm" data-hwid="${r.hwid}" data-block="${r.is_blocked ? '0' : '1'}">${r.is_blocked ? 'Mở khóa' : 'Khóa máy'}</button>
+          </td>
+        </tr>
+      `).join('') : '<tr><td colspan="6" class="muted">Chưa có thiết bị .EXE nào kích hoạt.</td></tr>';
+
+      const ordBody = document.getElementById('ordersBody');
+      ordBody.innerHTML = d.orders.length ? d.orders.map(o => `
+        <tr>
+          <td class="mono">${o.order_code}</td>
+          <td>${o.tier}</td>
+          <td>${Number(o.amount_vnd).toLocaleString('vi-VN')}đ</td>
+          <td>${o.email} ${o.zalo_phone ? '· ' + o.zalo_phone : ''}</td>
+          <td><span class="tag ${o.status === 'PAID' ? 'tag--pro' : ''}">${o.status}</span></td>
+          <td>
+            <button class="btn btn--secondary btn--sm" data-order="${o.order_code}" data-st="${o.status === 'PAID' ? 'PENDING' : 'PAID'}">${o.status === 'PAID' ? 'Hoàn trạng thái' : 'Xác nhận Đã thu'}</button>
+          </td>
+        </tr>
+      `).join('') : '<tr><td colspan="6" class="muted">Chưa có đơn đăng ký nào.</td></tr>';
+
+      const leadBody = document.getElementById('leadsBody');
+      leadBody.innerHTML = d.leads.length ? d.leads.map(l => `
+        <tr>
+          <td>${l.created_at}</td>
+          <td>${l.email}</td>
+          <td class="mono">${l.license_key}</td>
+          <td class="mono">${l.ip_address || '-'}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="4" class="muted">Chưa có lượt đăng ký nhận key.</td></tr>';
+    }
+
+    document.getElementById('loadAdminBtn').addEventListener('click', loadData);
+    document.addEventListener('click', async (e) => {
+      const secret = secretEl.value.trim();
+      const hwBtn = e.target.closest('[data-hwid]');
+      if (hwBtn) {
+        const body = { hwid: hwBtn.dataset.hwid };
+        if (hwBtn.dataset.plan) body.plan = hwBtn.dataset.plan;
+        if (hwBtn.dataset.block !== undefined) body.is_blocked = hwBtn.dataset.block === '1';
+        await fetch('/api/v1/admin/device', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify(body),
+        });
+        loadData();
+      }
+      const ordBtn = e.target.closest('[data-order]');
+      if (ordBtn) {
+        await fetch('/api/v1/admin/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify({ order_code: ordBtn.dataset.order, status: ordBtn.dataset.st }),
+        });
+        loadData();
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

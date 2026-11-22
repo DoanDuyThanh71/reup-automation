@@ -67,9 +67,10 @@ class AIClient:
     """
     def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None, model: Optional[str] = None):
         from ..config import config
-        self.base_url = (base_url or config.get("AI_BASE_URL", "https://9router.n8n71.com/v1")).rstrip("/")
-        self.api_key = api_key or config.get("AI_API_KEY", "")
-        self.model = model or config.get("AI_MODEL", "AiFF")
+        self._explicit_override = bool(base_url or api_key or model)
+        self.base_url = (base_url or config.get("AI_BASE_URL", "https://api.shopaikey.com/v1")).rstrip("/")
+        self.api_key = api_key if api_key is not None else config.get("AI_API_KEY", "")
+        self.model = model or config.get("AI_MODEL", "gemini-2.5-flash-lite")
 
     def test_connection(self) -> Dict[str, Any]:
         """Tests connectivity to the AI provider endpoint."""
@@ -93,27 +94,71 @@ class AIClient:
             return {"success": False, "error": f"Lỗi kết nối AI: {str(e)}"}
 
     def _call_chat(self, prompt: str, system_prompt: str = "", temperature: float = 0.3, max_tokens: int = 2000) -> str:
-        url = f"{self.base_url}/chat/completions"
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
+        # If explicitly instantiated (e.g. unit test or custom test), call directly
+        if self._explicit_override:
+            url = f"{self.base_url}/chat/completions"
+            headers = {"Content-Type": "application/json"}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            payload = {"model": self.model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+            res = requests.post(url, json=payload, headers=headers, timeout=60)
+            res.raise_for_status()
+            return res.json()["choices"][0]["message"]["content"].strip()
 
-        res = requests.post(url, json=payload, headers=headers, timeout=60)
-        res.raise_for_status()
-        data = res.json()
-        return data["choices"][0]["message"]["content"].strip()
+        # Multi-Key & Multi-Model Split Failover (Uses Gemma-4-26B / Flash-Lite for text so Vision RPD is preserved!)
+        from .quota_pool import QuotaPoolManager
+        providers = QuotaPoolManager.pick_healthy_providers(require_vision=False)
+        last_err = None
+        for prov in providers:
+            try:
+                if prov["kind"] == "gemini_native":
+                    text_models = QuotaPoolManager.get_ordered_models_for_task(prov["api_key"], task="text")
+                    full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                    for t_model in text_models:
+                        g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{t_model}:generateContent?key={prov['api_key']}"
+                        r = requests.post(
+                            g_url,
+                            json={"contents": [{"parts": [{"text": full_prompt}]}], "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}},
+                            timeout=60,
+                        )
+                        if r.status_code in (429, 503, 402):
+                            QuotaPoolManager.mark_cooldown(prov["api_key"], seconds=90, model=t_model)
+                            continue
+                        if r.status_code != 200:
+                            QuotaPoolManager.mark_error(prov["api_key"], model=t_model)
+                            continue
+                        QuotaPoolManager.mark_success(prov["api_key"], model=t_model)
+                        return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                else:
+                    url = f"{prov['base_url']}/chat/completions"
+                    headers = {"Content-Type": "application/json"}
+                    if prov["api_key"]:
+                        headers["Authorization"] = f"Bearer {prov['api_key']}"
+                    r = requests.post(
+                        url,
+                        json={"model": prov["model"], "messages": messages, "temperature": temperature, "max_tokens": max_tokens},
+                        headers=headers,
+                        timeout=60,
+                    )
+                    if r.status_code in (429, 503, 402):
+                        QuotaPoolManager.mark_cooldown(prov["api_key"] or prov["base_url"])
+                        continue
+                    r.raise_for_status()
+                    QuotaPoolManager.mark_success(prov["api_key"] or prov["base_url"])
+                    return r.json()["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                last_err = e
+                QuotaPoolManager.mark_error(prov["api_key"] or prov["base_url"])
+                continue
+
+        if last_err:
+            raise last_err
+        raise RuntimeError("Chưa có API Key hoặc cổng Quota nào khả dụng trong Pool")
 
     def sanitize_policy_words(self, text: str) -> str:
         """Replaces sensitive words with compliant slang to prevent TikTok & Facebook shadowbans."""

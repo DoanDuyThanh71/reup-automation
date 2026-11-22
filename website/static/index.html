@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reup Studio — Dịch Video Dài, Giọng Ngọc Huyền Vbee &amp; AI 0đ</title>
+  <meta name="description" content="Phần mềm Windows .EXE: Việt hóa video Douyin dài 10 phút, tích hợp giọng Ngọc Huyền Vbee & giọng AI 0đ, tự đăng Reels, TikTok kèm link Shopee.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/ui/base.css">
+  <link rel="stylesheet" href="assets/ui/cards.css">
+  <link rel="stylesheet" href="assets/ui/voice/fragment.css">
+  <link rel="stylesheet" href="assets/ui/window/fragment.css">
+  <link rel="stylesheet" href="assets/ui/toggles/fragment.css">
+  <style>
+    :root {
+      --font-text: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f3f3f1; --card: #ffffff; --ink: #111110; --muted: #666660;
+      --accent: #e5531c; --accent-ink: #ffffff; --action: #111110; --action-ink: #ffffff;
+      --g-bg: #e9e8e4; --g-surface: #f6f5f2;
+      --line: color-mix(in oklab, var(--ink) 10%, transparent);
+      --line-strong: color-mix(in oklab, var(--ink) 20%, transparent);
+    }
+
+    [data-theme="dark"] {
+      --bg: #070708; --card: #131316; --ink: #f3f3f0; --muted: #94969c;
+      --accent: #dafa9c; --accent-ink: #0a0d05; --action: #dafa9c; --action-ink: #0a0d05;
+      --g-bg: #0e0e10; --g-surface: #1b1c1f;
+      --line: color-mix(in oklab, var(--ink) 10%, transparent);
+      --line-strong: color-mix(in oklab, var(--ink) 22%, transparent);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+    body {
+      margin: 0; font-family: var(--font-text); font-size: 16px; line-height: 1.5;
+      background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+      transition: background-color 220ms ease, color 220ms ease;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    [hidden] { display: none !important; }
+
+    .panel, .panel__screen {
+      --fx-bg: var(--g-bg); --fx-surface: var(--g-surface); --fx-ink: var(--ink);
+      --fx-muted: var(--muted); --fx-accent: var(--accent); --fx-accent-ink: var(--accent-ink);
+      --calm: var(--g-bg);
+    }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    .top {
+      position: sticky; top: 0; z-index: 40;
+      background: color-mix(in oklab, var(--bg) 88%, transparent);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .top__in {
+      max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 64px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+    .brand__mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--action); color: var(--action-ink);
+      display: grid; place-items: center; font-weight: 800; font-size: 13px;
+    }
+    .top__nav { display: flex; gap: 6px; margin-left: 12px; }
+    .top__link { padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--muted); }
+    .top__link:hover { color: var(--ink); background: color-mix(in oklab, var(--ink) 6%, transparent); }
+    .top__right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+    .seg {
+      display: inline-flex; padding: 3px; border-radius: 10px;
+      background: color-mix(in oklab, var(--ink) 6%, var(--bg));
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+    .seg button {
+      font-size: 13px; font-weight: 500; border: 0; background: none; color: var(--muted);
+      height: 28px; padding: 0 11px; border-radius: 7px; cursor: pointer;
+    }
+    .seg button[aria-pressed="true"] {
+      background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--line);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 44px; padding: 0 20px; border-radius: 10px; border: 1px solid transparent;
+      font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: transform 120ms ease, opacity 160ms ease, border-color 160ms ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn--primary { background: var(--action); color: var(--action-ink); }
+    .btn--primary:hover { opacity: 0.92; }
+    .btn--secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+    .btn--secondary:hover { background: color-mix(in oklab, var(--ink) 7%, var(--card)); }
+    .btn--sm { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 8px; }
+
+    /* ========================================================================
+       CINEMA HERO: COMPACT HEADLINE + INSTANT KEY FORM + VIDEO TUTORIAL TOP
+       ======================================================================== */
+    .hero { padding: 40px 0 32px; text-align: center; }
+    .pill-badge {
+      display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px;
+      border-radius: 999px; background: var(--card); border: 1px solid var(--line);
+      font-size: 13px; font-weight: 500; color: var(--muted);
+    }
+    .pill-badge i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+    .hero h1 {
+      margin: 14px auto 0; max-width: 780px;
+      font-size: clamp(32px, 3.2vw + 14px, 50px); line-height: 1.08;
+      letter-spacing: -0.035em; font-weight: 800; text-wrap: balance;
+    }
+    .hero__sub {
+      margin: 12px auto 0; max-width: 580px; font-size: 16px; color: var(--muted);
+    }
+
+    /* Compact Download Bar right above/below video */
+    .quick-dl {
+      max-width: 640px; margin: 22px auto 0; padding: 8px;
+      border-radius: 14px; background: var(--card); border: 1px solid var(--line-strong);
+      box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.4);
+    }
+    .quick-dl__form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .quick-dl__input {
+      height: 44px; padding: 0 14px; border-radius: 10px; border: 0;
+      background: var(--bg); color: var(--ink); font-size: 15px; min-width: 0;
+    }
+    .quick-dl__input:focus { outline: 2px solid var(--action); }
+    .quick-dl__tags {
+      margin-top: 8px; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 18px;
+      font-size: 12px; color: var(--muted);
+    }
+    .quick-dl__res {
+      margin-top: 10px; padding: 12px; border-radius: 10px;
+      background: color-mix(in oklab, #22c55e 12%, var(--bg));
+      border: 1px solid color-mix(in oklab, #22c55e 45%, transparent);
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+      font-size: 14px;
+    }
+
+    /* Video Player Frame right in Hero */
+    .video-stage {
+      margin: 28px auto 0; max-width: 980px;
+      border-radius: 20px; overflow: hidden;
+      background: #0a0b0e; border: 1px solid var(--line-strong);
+      box-shadow: 0 28px 72px -20px rgb(0 0 0 / 0.65);
+    }
+    .video-stage__bar {
+      height: 40px; padding: 0 16px; background: var(--card); border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+    }
+    .video-stage__dots { display: flex; gap: 6px; }
+    .video-stage__dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+    .video-wrap { position: relative; aspect-ratio: 16 / 9; background: #070708; }
+    .video-wrap video { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+    .video-play-cover {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgba(7, 7, 8, 0.32); cursor: pointer; transition: opacity 180ms ease;
+    }
+    .video-play-cover.is-hidden { opacity: 0; pointer-events: none; }
+    .video-play-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 24px; border-radius: 999px;
+      background: var(--action); color: var(--action-ink);
+      font-weight: 700; font-size: 15px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+
+    .chapters {
+      padding: 10px 14px; background: var(--card); border-top: 1px solid var(--line);
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;
+    }
+    .chap-btn {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+      background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .chap-btn:hover, .chap-btn.is-active {
+      border-color: var(--action); color: var(--ink);
+    }
+
+    /* ========================================================================
+       SECTIONS (MINIMAL COPY, HIGH VISUAL CLARITY)
+       ======================================================================== */
+    .sec { padding: 48px 0; }
+    .sec-title {
+      margin: 0 0 24px; font-size: clamp(24px, 1.8vw + 14px, 34px);
+      letter-spacing: -0.03em; font-weight: 700;
+    }
+    .sec-title span { color: var(--muted); font-weight: 500; }
+
+    /* Voice Audition List */
+    .voice-list { display: grid; gap: 10px; margin-top: 14px; }
+    .voice-item {
+      width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+      display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px;
+      cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease;
+    }
+    .voice-item:hover { border-color: var(--line-strong); }
+    .voice-item.is-active {
+      border-color: var(--action); background: color-mix(in oklab, var(--action) 8%, var(--bg));
+    }
+    .voice-ico {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--card);
+      border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 13px;
+    }
+    .voice-item.is-active .voice-ico { background: var(--action); color: var(--action-ink); border-color: transparent; }
+    .voice-item b { display: block; font-size: 14px; font-weight: 600; }
+    .voice-item small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .voice-tag {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); color: var(--muted);
+    }
+    .voice-tag--hot { background: color-mix(in oklab, var(--accent) 18%, var(--card)); color: var(--ink); border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+
+    .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .g2 .panel { --p-h: 310px; }
+
+    /* Compact Calculator */
+    .calc-strip {
+      padding: 24px 28px; border-radius: 18px; background: var(--card); border: 1px solid var(--line);
+      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 28px; align-items: center;
+    }
+    .calc-slider { width: 100%; accent-color: var(--accent); height: 8px; cursor: pointer; margin: 12px 0 6px; }
+
+    /* Footer */
+    .site-footer {
+      margin-top: 32px; padding: 36px 0 48px; border-top: 1px solid var(--line);
+      font-size: 13px; color: var(--muted);
+    }
+    .footer-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
+    .footer-links a:hover { color: var(--ink); }
+
+    /* Modal */
+    dialog.rs-modal {
+      width: min(92vw, 460px); border: 1px solid var(--line-strong); border-radius: 20px;
+      background: var(--card); color: var(--ink); padding: 26px; box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+    }
+    dialog.rs-modal::backdrop { background: rgb(0 0 0 / 0.68); }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong);
+      background: var(--bg); color: var(--ink); cursor: pointer; display: grid; place-items: center;
+    }
+    .modal-form { display: grid; gap: 12px; }
+    .modal-field { display: grid; gap: 5px; font-size: 13px; font-weight: 500; }
+    .modal-field input {
+      height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong);
+      background: var(--bg); color: var(--ink); font-size: 15px;
+    }
+    .qr-card {
+      margin-top: 14px; padding: 16px; border-radius: 14px; background: #ffffff; color: #111111;
+      display: grid; justify-items: center; gap: 6px; text-align: center;
+    }
+    .qr-card img { width: 200px; height: auto; border-radius: 8px; }
+
+    @media (max-width: 1023px) {
+      .top__nav { display: none; }
+      .g2, .g3, .calc-strip { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 639px) {
+      .quick-dl__form { grid-template-columns: minmax(0, 1fr); }
+      .wrap, .top__in { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- STICKY HEADER -->
+  <header class="top">
+    <div class="top__in">
+      <a class="brand" href="#top">
+        <span class="brand__mark">RS</span>
+        <span>Reup Studio</span>
+      </a>
+      <nav class="top__nav" aria-label="Điều hướng">
+        <a class="top__link" href="#video-huong-dan">Xem Video 30s</a>
+        <a class="top__link" href="#nghe-thu">Thử Giọng Ngọc Huyền</a>
+        <a class="top__link" href="#tinh-nang">Công nghệ</a>
+        <a class="top__link" href="#bang-gia">Bảng giá &amp; Vé Meet 50k</a>
+      </nav>
+      <div class="top__right">
+        <div class="seg" role="group" aria-label="Giao diện">
+          <button type="button" data-set-theme="light" aria-pressed="false">Sáng</button>
+          <button type="button" data-set-theme="dark" aria-pressed="true">Tối</button>
+        </div>
+        <a class="btn btn--primary btn--sm" href="#tai-tool" data-focus-email>Tải .EXE (0đ)</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="top">
+    <!-- ======================================================================
+         1. HERO: PUNCHY HEADLINE + 1-LINE KEY FORM + FULL TUTORIAL VIDEO
+         ====================================================================== -->
+    <section class="hero">
+      <span class="pill-badge"><i></i> Tâm sự từ người cày kênh thực chiến · Không phải công ty bán phần mềm</span>
+      <h1>Tôi tự viết bản .EXE này vì quá mệt cảnh thức 3h sáng cắt phim mà kênh vẫn âm tiền.</h1>
+      <p class="hero__sub">Khóa xưng hô phim dài 10 phút, giọng Ngọc Huyền Vbee &amp; AI 0đ — công cụ giúp một người tự kéo triệu view, nhận tiền Facebook Reels &amp; đơn Shopee mỗi tháng.</p>
+
+      <!-- Instant Key & Download Input -->
+      <div class="quick-dl" id="tai-tool">
+        <form class="quick-dl__form" id="heroTrialForm" novalidate>
+          <input class="quick-dl__input" id="heroEmailInput" type="email" name="email" placeholder="Nhập Gmail nhận Key dùng thử .EXE (0đ cho anh em cùng cảnh ngộ)..." required aria-label="Gmail nhận Key">
+          <button class="btn btn--primary" type="submit" id="heroTrialBtn">Nhận Key &amp; Tải .EXE</button>
+        </form>
+        <div class="quick-dl__tags">
+          <span>✓ Tặng dùng thử 0đ (Windows 64-bit)</span>
+          <span>✓ 0đ phí nuôi Voice &amp; AI</span>
+          <span>✓ Vé buổi Meet chia sẻ bật kiếm tiền FB: 50.000đ</span>
+        </div>
+        <div class="quick-dl__res" id="heroTrialResult" hidden>
+          <span>Mã máy của bạn: <strong class="mono" id="heroMintedKey"></strong></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="btn btn--primary btn--sm" href="/download/windows">Tải bộ cài .ZIP</a>
+            <button class="btn btn--secondary btn--sm" type="button" data-open-order="MEET_50K">Vé Meet chia sẻ bật kiếm tiền 50k</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top-of-page Promo & 3-Step Tutorial Video -->
+      <div class="video-stage" id="video-huong-dan">
+        <div class="video-stage__bar">
+          <span class="video-stage__dots"><i></i><i></i><i></i></span>
+          <span style="margin-left: 6px; font-weight: 600; color: var(--ink);">Câu chuyện 36 giây: Lý do tôi tự làm tool này &amp; Bảng doanh thu Facebook Reels thực tế</span>
+        </div>
+        <div class="video-wrap">
+          <video id="heroPromoVideo" src="/static/promo_tutorial.mp4?v=3" playsinline preload="metadata" controls></video>
+          <div class="video-play-cover" id="videoPlayCover">
+            <span class="video-play-btn">▶ Xem lý do ra đời &amp; Kết quả bật kiếm tiền (0:36)</span>
+          </div>
+        </div>
+        <div class="chapters" role="group" aria-label="Mốc thời gian video">
+          <button class="chap-btn is-active" type="button" data-seek="0">0:00 Nỗi khổ 3h sáng âm tiền</button>
+          <button class="chap-btn" type="button" data-seek="8">0:08 Lý do tự viết bản .EXE</button>
+          <button class="chap-btn" type="button" data-seek="16">0:16 Tiền Facebook trả ($) &amp; Triệu View</button>
+          <button class="chap-btn" type="button" data-seek="27">0:27 Tặng .EXE 0đ &amp; Buổi Meet 50k</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         2. VOICE AUDITION STUDIO (FEATURING NGOC HUYEN VBEE #1)
+         ====================================================================== -->
+    <section class="sec" id="nghe-thu">
+      <h2 class="sec-title">Nghe thử giọng đọc thực tế. <span>Đầy đủ Vbee quốc dân &amp; Giọng 0đ.</span></h2>
+
+      <article class="card card--split">
+        <div class="card__body">
+          <h3 class="card__title">Bấm chọn giọng hợp kênh của bạn</h3>
+          <p class="card__text">Tự đồng bộ khớp từng mili-giây phụ đề SRT, tự tăng tốc vừa khung hình.</p>
+
+          <div class="voice-list" role="group" aria-label="Mẫu giọng đọc">
+            <button class="voice-item is-active" type="button" data-audio-src="/demos/vbee_ngoc_huyen.mp3" data-voice-label="Ngọc Huyền Vbee · 48kHz" data-voice-line="Ba năm làm người vợ thầm lặng trong hào môn, không ai biết cô gái mặc tạp dề trong bếp lại chính là nhà sáng lập tập đoàn nghìn tỷ...">
+              <span class="voice-ico" data-play-indicator>▶</span>
+              <span>
+                <b>1. Ngọc Huyền Vbee (Chuẩn 48kHz)</b>
+                <small>Giọng nữ Hà Nội Review Phim quốc dân</small>
+              </span>
+              <span class="voice-tag voice-tag--hot">Vbee Hot</span>
+            </button>
+
+            <button class="voice-item" type="button" data-audio-src="/demos/gemini_rv_nam_charon.mp3" data-voice-label="Nam Trầm Charon · 1.15x" data-voice-line="Không ai ngờ người đàn ông mặc đồ bảo vệ đứng trước cổng tập đoàn lại chính là người nắm giữ toàn bộ cổ phần...">
+              <span class="voice-ico" data-play-indicator>▶</span>
+              <span>
+                <b>2. Nam Trầm Điện Ảnh (Charon 1.15x)</b>
+                <small>Hành động, tổng tài, nghịch tập</small>
+              </span>
+              <span class="voice-tag">0đ / Key Free</span>
+            </button>
+
+            <button class="voice-item" type="button" data-audio-src="/demos/gemini_rv_nu_kore.mp3" data-voice-label="Nữ Sắc Sảo Kore · 1.15x" data-voice-line="Ngay giây phút tờ đơn ly hôn đặt xuống bàn, cô đã lấy lại thân phận thật của mình...">
+              <span class="voice-ico" data-play-indicator>▶</span>
+              <span>
+                <b>3. Nữ Sắc Sảo (Kore 1.15x)</b>
+                <small>Nữ cường, ngôn tình, cung đấu</small>
+              </span>
+              <span class="voice-tag">0đ / Key Free</span>
+            </button>
+
+            <button class="voice-item" type="button" data-audio-src="/demos/rv_nu_kich_tinh.mp3" data-voice-label="Offline Local ONNX" data-voice-line="Chạy hoàn toàn trên CPU/GPU máy cá nhân, không tốn quota mạng.">
+              <span class="voice-ico" data-play-indicator>▶</span>
+              <span>
+                <b>4. Giọng Offline Chạy Nội Bộ</b>
+                <small>0.7 giây/câu · Không phụ thuộc mạng</small>
+              </span>
+              <span class="voice-tag">100% Offline</span>
+            </button>
+          </div>
+          <audio id="demoAudioPlayer" preload="none" src="/demos/vbee_ngoc_huyen.mp3"></audio>
+        </div>
+
+        <div class="panel" data-fx="painterly-landscape" data-fx-seed="8" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"calm":0.25,"calmX":0.5,"calmY":0.55,"drift":0,"side":1}' style="--calm-k:0%">
+          <div class="stage" data-ui-loop>
+            <div class="at-center" style="--w: 316px">
+              <div class="ui ui-panel ui-voice" data-ui="voice" id="liveVoiceWidget">
+                <div class="ui-voice__top">
+                  <span class="ui-chip ui-chip--accent ui-chip--live" id="voiceChipStatus">Bấm mẫu bên trái để nghe</span>
+                  <span class="ui-spacer"></span>
+                  <span class="ui-voice__time" data-voice-time id="voiceTimerText">00:14</span>
+                </div>
+                <div class="ui-voice__orb" data-voice-orb style="cursor: pointer;" title="Phát / Dừng"></div>
+                <div class="ui-voice__who"><span class="ui-voice__name" id="voiceSpeakerTitle">Ngọc Huyền Vbee · 48kHz</span><span class="ui-voice__with">Bản thu thật</span></div>
+                <div class="ui-voice__cap" data-voice-cap id="voiceCaptionText">Ba năm làm người vợ thầm lặng trong hào môn, không ai biết cô gái mặc tạp dề trong bếp lại chính là nhà sáng lập tập đoàn nghìn tỷ...</div>
+                <div class="ui-voice__bar">
+                  <span class="ui-voice__btn" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="8" rx="2"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5V14"/></svg></span>
+                  <span class="ui-voice__wave" aria-hidden="true"><i style="--h:6"></i><i style="--h:12"></i><i style="--h:18"></i><i style="--h:9"></i><i style="--h:20"></i><i style="--h:13"></i><i style="--h:16"></i><i style="--h:10"></i><i style="--h:19"></i><i style="--h:12"></i><i style="--h:7"></i><i style="--h:15"></i><i style="--h:18"></i><i style="--h:11"></i><i style="--h:8"></i><i style="--h:14"></i><i style="--h:10"></i><i style="--h:6"></i></span>
+                  <span class="ui-voice__btn ui-voice__end" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M5 3.8v8.4L12.2 8z"/></svg></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ======================================================================
+         3. VISUAL BENTO (2 COMPACT CARDS + SLIDER)
+         ====================================================================== -->
+    <section class="sec" id="tinh-nang">
+      <h2 class="sec-title">Cốt lõi tự động hóa. <span>Chuẩn vai nhân vật, sạch bản quyền.</span></h2>
+
+      <div class="g2">
+        <article class="card card--row">
+          <h3>Dịch 2 tầng khóa xưng hô suốt 10 phút</h3>
+          <p>Xem toàn tập phim lập hồ sơ quan hệ nhân vật trước khi dịch, kèm 5 mẫu Custom Prompt sẵn có.</p>
+          <div class="panel" data-fx="silk-folds" data-fx-seed="27" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","muted":"#6f675c","accent":"#b08a62"}' data-fx-params='{"speed":0,"tone":1,"scale":1.3,"folds":0.55,"sheen":0.5,"angle":-28,"calm":0.25,"calmX":0.5,"calmY":0.85}' style="--calm-k:0%">
+            <div class="stage stage--fade-b">
+              <div class="at-corner fit" style="--ax:24px;--ay:24px;--fit-max:470px">
+                <div class="ui ui-panel ui-win" data-ui="window" data-open="Đang khóa" data-work="Đang dịch" data-done="Chuẩn vai">
+                  <div class="ui-win__bar">
+                    <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="ui-win__crumb">Character Bible <i>/</i> <b>Tổng tài</b></span>
+                  </div>
+                  <div class="ui-win__body">
+                    <div class="ui-win__main" style="width: 100%;">
+                      <div class="ui-win__cols" aria-hidden="true"><span>Nhân vật</span><span>Xưng hô</span><span>Trạng thái</span><span>Câu</span></div>
+                      <ul class="ui-win__rows">
+                        <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">LC</span><span class="ui-win__who">Lục Cảnh Thâm</span><span class="ui-win__sub">Tôi - Cô</span><span class="ui-win__st is-done" data-st>Chuẩn vai</span><span class="ui-win__age">42</span></li>
+                        <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">LH</span><span class="ui-win__who">Lâm Hạ Vi</span><span class="ui-win__sub">Tôi - Chủ tịch</span><span class="ui-win__st is-done" data-st>Chuẩn vai</span><span class="ui-win__age">38</span></li>
+                        <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">BT</span><span class="ui-win__who">Bà nội Lục gia</span><span class="ui-win__sub">Bà - Cháu dâu</span><span class="ui-win__st is-done" data-st>Chuẩn vai</span><span class="ui-win__age">19</span></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card card--row">
+          <h3>Đổi vân tay MP4 &amp; Tự đăng kèm link Shopee</h3>
+          <p>Làm mới mã băm khung hình chống quét trùng, tự đăng Reels, TikTok Studio và gắn bình luận Shopee.</p>
+          <div class="panel" data-fx="gradient-mesh" data-fx-seed="21" data-fx-palette='{"bg":"#cdd6c6","surface":"#dce3d6","ink":"#262d24","muted":"#5f6a5a","accent":"#6c8e63"}' data-fx-params='{"speed":0,"calm":0.25,"calmX":0.5,"calmY":0.85,"tint":0.6,"relief":0.35}' style="--calm-k:0%">
+            <div class="stage stage--fade-b">
+              <div class="at-rise fit" style="--ax:28px;--ay:24px;--fit-max:430px">
+                <div class="ui ui-panel ui-toggles" data-ui="toggles">
+                  <div class="ui-head">
+                    <div class="ui-title">Tự động hóa đầu ra</div>
+                    <span class="ui-spacer"></span>
+                    <div class="ui-meta" data-tg-count>4 / 4 bật</div>
+                  </div>
+                  <ul class="ui-toggles__list">
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Tự nhận diện GPU / CPU máy</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="GPU"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Xóa metadata &amp; đổi hash MP4</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="MP4"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Đăng thẳng Reels &amp; TikTok Studio</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Đăng"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Bình luận đầu gắn link Shopee</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Shopee"><i></i></button></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Compact Slider -->
+      <div class="calc-strip" style="margin-top: 16px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <strong>Chia tải 5 rổ Model trên 1 Key Gemini Free:</strong>
+            <span style="font-size:20px;font-weight:800;color:var(--accent);" id="calcVideosLabel">15 video / ngày</span>
+          </div>
+          <input class="calc-slider" type="range" id="calcSlider" min="5" max="60" step="5" value="15" aria-label="Số video mỗi ngày">
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:13px;color:var(--muted);">Tiết kiệm so với thuê dịch &amp; TTS lẻ:</div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-0.03em;" id="calcSavedText">~2.250.000đ / tháng</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         4. PRICING: 3 ULTRA-CLEAN CHOICES
+         ====================================================================== -->
+    <section class="sec" id="bang-gia">
+      <h2 class="sec-title">Chọn gói bắt đầu. <span>Không rườm rà.</span></h2>
+
+      <div class="g3">
+        <article class="card plan">
+          <div class="plan__name">1. Dùng Thử .EXE</div>
+          <div class="plan__price">0đ <small>tải ngay</small></div>
+          <p class="plan__for">Tự trải nghiệm chất lượng dịch &amp; lồng tiếng ngay trên máy bạn.</p>
+          <a class="plan__btn" href="#tai-tool" data-focus-email>Nhận Key &amp; Tải .ZIP</a>
+          <ul class="plan__list">
+            <li>Chạy ngay không cần cài Python</li>
+            <li>Đầy đủ dịch 2 tầng &amp; Voice 0đ / Vbee</li>
+            <li>Lưu MP4 nội bộ 100% trên ổ cứng</li>
+          </ul>
+        </article>
+
+        <article class="card plan is-featured" data-glow="edge-glow" data-glow-params='{"radius":20,"width":1.2,"glow":10,"bloom":0.3,"segment":0.3,"speed":400,"idle":0.3,"wash":0,"fill":1}' style="--fx-bg:var(--bg);--fx-surface:var(--card);--fx-accent:var(--accent)">
+          <div class="plan__name">2. Buổi Meet Thực Chiến <span class="plan__badge">90% người mới chọn</span></div>
+          <div class="plan__price">50.000đ <small>/ vé + Record</small></div>
+          <p class="plan__for">Học trực tiếp cách lấy Key Free 300 clip/ngày, chọn phim &amp; gắn giỏ Shopee.</p>
+          <button class="plan__btn plan__btn--primary" type="button" data-open-order="MEET_50K" style="border:0;cursor:pointer;width:100%;">Giữ chỗ buổi Meet 50k</button>
+          <ul class="plan__list">
+            <li>Cầm tay thiết lập đa rổ Model 0đ</li>
+            <li>Tặng bộ Custom Prompt chuẩn từng ngách</li>
+            <li>Mẹo lách bản quyền nhạc &amp; khung hình</li>
+            <li>Gửi tặng Video Record xem lại trọn đời</li>
+          </ul>
+        </article>
+
+        <article class="card plan">
+          <div class="plan__name">3. Khóa Pro Đa Kênh</div>
+          <div class="plan__price">149.000đ <small>/ tháng</small></div>
+          <p class="plan__for">Dành cho hệ thống cày nhiều Fanpage Reels &amp; kênh TikTok cùng lúc.</p>
+          <button class="plan__btn" type="button" data-open-order="PRO_MONTHLY" style="background:transparent;border:0;cursor:pointer;width:100%;">Mở khóa Pro</button>
+          <ul class="plan__list">
+            <li>Chạy 5 luồng video 10 phút song song</li>
+            <li>Quản lý không giới hạn kênh Reels / TikTok</li>
+            <li>Nhân bản giọng riêng (Voice Clone WAV)</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- MINIMAL CLEAN FOOTER -->
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="brand__mark">RS</span>
+        <strong>Reup Studio v2.0</strong>
+        <span>· Windows 64-bit · Dữ liệu lưu 100% tại máy trạm</span>
+      </div>
+      <div class="footer-links">
+        <a href="#video-huong-dan">Video hướng dẫn</a>
+        <a href="#nghe-thu">Thử giọng Ngọc Huyền</a>
+        <a href="/download/windows">Tải .ZIP</a>
+        <a href="/admin">Quản trị HWID</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- VIETQR MODAL -->
+  <dialog class="rs-modal" id="orderModal" aria-labelledby="orderModalTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="orderModalTitle" style="margin:0;font-size:18px;">Giữ chỗ Buổi Meet Thực Chiến (50.000đ)</h3>
+        <p id="orderModalDesc" style="margin:4px 0 0;font-size:13px;color:var(--muted);">Nhận lịch Google Meet + Video Record + Bộ mẫu Prompt qua Gmail.</p>
+      </div>
+      <button class="modal-close" type="button" id="closeOrderModal" aria-label="Đóng">✕</button>
+    </div>
+
+    <form class="modal-form" id="orderForm" novalidate>
+      <input type="hidden" name="tier" id="orderTierInput" value="MEET_50K">
+      <label class="modal-field">
+        <span>Gmail nhận vé / khóa kích hoạt *</span>
+        <input type="email" name="email" required placeholder="tenban@gmail.com">
+      </label>
+      <label class="modal-field">
+        <span>Số Zalo nhận thông báo</span>
+        <input type="tel" name="zalo_phone" placeholder="09xx xxx xxx">
+      </label>
+      <button class="btn btn--primary" type="submit" style="width:100%;">Lấy mã quét VietQR</button>
+      <div id="orderStatusText" style="font-size:13px;color:var(--muted);"></div>
+    </form>
+
+    <div class="qr-card" id="qrResultBox" hidden>
+      <strong id="qrOrderTitle" style="font-size:14px;">Quét VietQR để hoàn tất</strong>
+      <img id="qrImage" src="" alt="Mã VietQR">
+      <div style="font-size:13px;">Nội dung CK: <strong id="qrMemoCode" style="font-family:monospace;font-size:15px;"></strong></div>
+    </div>
+  </dialog>
+
+  <script type="module">
+    import fx from './assets/effects/fx.js';
+    import ui from './assets/ui/ui.js';
+
+    const root = document.documentElement;
+    const savedTheme = (() => { try { return localStorage.getItem('rs-theme'); } catch { return null; } })();
+    const applyTheme = (theme) => {
+      root.dataset.theme = theme;
+      document.querySelectorAll('[data-set-theme]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.setTheme === theme)));
+    };
+    applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+
+    function glowOnHover() {
+      for (const el of document.querySelectorAll('[data-glow]')) {
+        let busy = false;
+        const lap = async () => {
+          if (busy || ui.reduced()) return;
+          busy = true;
+          try {
+            const c = await fx.mount(el, el.dataset.glow, {
+              palette: fx.readPalette(el),
+              params: JSON.parse(el.dataset.glowParams || '{}'),
+              seed: 2
+            });
+            const r = el.getBoundingClientRect(), per = 2 * (r.width + r.height);
+            await new Promise(res => setTimeout(res, per / Math.min(c.params.speed, per / 4) * 1000));
+            el.classList.add('is-fading');
+            await new Promise(res => setTimeout(res, 650));
+            c.destroy();
+          } catch {}
+          el.classList.remove('is-fading');
+          busy = false;
+        };
+        el.addEventListener('pointerenter', lap);
+        el.addEventListener('focusin', lap);
+        fx.load(el.dataset.glow).catch(() => {});
+      }
+    }
+
+    await Promise.all([ui.loadAll(document), ui.startAll(document), ui.grounds(document, fx)]);
+    glowOnHover();
+    root.dataset.ready = '1';
+
+    document.querySelectorAll('[data-set-theme]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.setTheme;
+        if (next === root.dataset.theme) return;
+        try { localStorage.setItem('rs-theme', next); } catch {}
+        applyTheme(next);
+        for (const el of document.querySelectorAll('[data-ui]')) el.__ui?.repaint?.();
+        await ui.grounds(document.querySelector('main'), fx);
+      });
+    });
+
+    // Focus Gmail input
+    document.querySelectorAll('[data-focus-email]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const box = document.getElementById('tai-tool');
+        const input = document.getElementById('heroEmailInput');
+        if (box && input) {
+          e.preventDefault();
+          box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => input.focus({ preventScroll: true }), 300);
+        }
+      });
+    });
+
+    // Hero Tutorial Video Cover & Chapters
+    const promoVid = document.getElementById('heroPromoVideo');
+    const playCover = document.getElementById('videoPlayCover');
+    const chapBtns = [...document.querySelectorAll('.chap-btn')];
+
+    playCover?.addEventListener('click', () => {
+      playCover.classList.add('is-hidden');
+      promoVid?.play();
+    });
+    promoVid?.addEventListener('play', () => playCover?.classList.add('is-hidden'));
+    chapBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!promoVid) return;
+        promoVid.currentTime = Number(btn.dataset.seek || 0);
+        playCover?.classList.add('is-hidden');
+        promoVid.play();
+        chapBtns.forEach(b => b.classList.toggle('is-active', b === btn));
+      });
+    });
+
+    // Trial Form
+    const heroForm = document.getElementById('heroTrialForm');
+    const heroBtn = document.getElementById('heroTrialBtn');
+    const heroResult = document.getElementById('heroTrialResult');
+    const heroMintedKey = document.getElementById('heroMintedKey');
+
+    heroForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('heroEmailInput');
+      const email = (input?.value || '').trim();
+      if (!email || !email.includes('@')) { input?.focus(); return; }
+      heroBtn.disabled = true;
+      const prev = heroBtn.textContent;
+      heroBtn.textContent = 'Đang cấp...';
+      try {
+        const res = await fetch('/api/v1/trial-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          heroMintedKey.textContent = data.license_key;
+          heroResult.hidden = false;
+        } else {
+          alert(data.error || 'Email không hợp lệ.');
+        }
+      } finally {
+        heroBtn.disabled = false;
+        heroBtn.textContent = prev;
+      }
+    });
+
+    // Voice Audition Studio (with Ngoc Huyen Vbee #1)
+    const audio = document.getElementById('demoAudioPlayer');
+    const voiceItems = [...document.querySelectorAll('.voice-item')];
+    const speakerTitle = document.getElementById('voiceSpeakerTitle');
+    const captionText = document.getElementById('voiceCaptionText');
+    const chipStatus = document.getElementById('voiceChipStatus');
+    const timerText = document.getElementById('voiceTimerText');
+    const voiceOrb = document.querySelector('#liveVoiceWidget [data-voice-orb]');
+
+    const syncIcons = (playing) => {
+      voiceItems.forEach(i => {
+        const ico = i.querySelector('[data-play-indicator]');
+        if (ico) ico.textContent = (i === playing && !audio.paused) ? '❚❚' : '▶';
+      });
+    };
+
+    const toggleVoice = async (item) => {
+      promoVid?.pause();
+      const active = item || voiceItems.find(i => i.classList.contains('is-active')) || voiceItems[0];
+      const src = active.dataset.audioSrc;
+      const same = audio.getAttribute('src') === src;
+      voiceItems.forEach(i => i.classList.toggle('is-active', i === active));
+      speakerTitle.textContent = active.dataset.voiceLabel || '';
+      captionText.textContent = active.dataset.voiceLine || '';
+
+      if ((item && same && !audio.paused) || (!item && !audio.paused)) {
+        audio.pause();
+        chipStatus.textContent = 'Đã tạm dừng';
+        syncIcons(active);
+        return;
+      }
+      if (!same) { audio.src = src; audio.currentTime = 0; }
+      try {
+        await audio.play();
+        chipStatus.textContent = 'Đang phát mẫu thật';
+        syncIcons(active);
+      } catch {
+        chipStatus.textContent = 'Bấm lại để phát';
+      }
+    };
+
+    voiceItems.forEach(i => i.addEventListener('click', () => toggleVoice(i)));
+    voiceOrb?.addEventListener('click', () => toggleVoice(null));
+    audio?.addEventListener('timeupdate', () => {
+      timerText.textContent = `00:${String(Math.floor(audio.currentTime || 0)).padStart(2, '0')}`;
+    });
+    audio?.addEventListener('ended', () => {
+      chipStatus.textContent = 'Đã phát xong';
+      syncIcons(null);
+    });
+
+    // Compact Slider
+    const slider = document.getElementById('calcSlider');
+    const videosLbl = document.getElementById('calcVideosLabel');
+    const savedLbl = document.getElementById('calcSavedText');
+    slider?.addEventListener('input', () => {
+      const n = Number(slider.value || 15);
+      videosLbl.textContent = `${n} video / ngày`;
+      savedLbl.textContent = `~${(n * 30 * 5000).toLocaleString('vi-VN')}đ / tháng`;
+    });
+
+    // Order Modal
+    const modal = document.getElementById('orderModal');
+    const modalTitle = document.getElementById('orderModalTitle');
+    const modalDesc = document.getElementById('orderModalDesc');
+    const tierInput = document.getElementById('orderTierInput');
+    const orderForm = document.getElementById('orderForm');
+    const orderStatus = document.getElementById('orderStatusText');
+    const qrBox = document.getElementById('qrResultBox');
+    const qrImg = document.getElementById('qrImage');
+    const qrMemo = document.getElementById('qrMemoCode');
+    const qrTitle = document.getElementById('qrOrderTitle');
+
+    document.querySelectorAll('[data-open-order]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tier = btn.dataset.openOrder || 'MEET_50K';
+        tierInput.value = tier;
+        qrBox.hidden = true;
+        orderStatus.textContent = '';
+        if (tier === 'PRO_MONTHLY') {
+          modalTitle.textContent = 'Mở khóa Pro Đa Kênh (149.000đ/tháng)';
+          modalDesc.textContent = 'Mở khóa chạy 5 luồng song song, không giới hạn kênh cho mã máy HWID của bạn.';
+        } else {
+          modalTitle.textContent = 'Giữ chỗ Buổi Meet Thực Chiến (50.000đ)';
+          modalDesc.textContent = 'Nhận lịch Google Meet + Video Record + Bộ mẫu Prompt qua Gmail.';
+        }
+        modal.showModal();
+      });
+    });
+    document.getElementById('closeOrderModal')?.addEventListener('click', () => modal.close());
+    modal?.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+
+    orderForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(orderForm);
+      const email = String(fd.get('email') || '').trim();
+      if (!email || !email.includes('@')) { orderStatus.textContent = 'Nhập Gmail hợp lệ.'; return; }
+      orderStatus.textContent = 'Đang tạo mã VietQR...';
+      const res = await fetch('/api/v1/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(fd.entries())),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        orderStatus.textContent = '';
+        qrTitle.textContent = `Thanh toán ${Number(data.amount_vnd).toLocaleString('vi-VN')}đ`;
+        qrImg.src = data.qr_url;
+        qrMemo.textContent = data.order_code;
+        qrBox.hidden = false;
+      } else {
+        orderStatus.textContent = data.error || 'Lỗi tạo đơn.';
+      }
+    });
+  </script>
+</body>
+</html>

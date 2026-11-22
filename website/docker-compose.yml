@@ -1,0 +1,37 @@
+services:
+  portal:
+    build: .
+    container_name: reup_studio_portal
+    restart: unless-stopped
+    environment:
+      - PORTAL_PORT=8088
+      - PORTAL_ADMIN_SECRET=${PORTAL_ADMIN_SECRET:-reup-admin-2026}
+      - DOWNLOAD_REDIRECT_URL=${DOWNLOAD_REDIRECT_URL:-}
+      - VIETQR_BANK_ID=${VIETQR_BANK_ID:-MB}
+      - VIETQR_ACCOUNT_NO=${VIETQR_ACCOUNT_NO:-0000123456789}
+      - VIETQR_ACCOUNT_NAME=${VIETQR_ACCOUNT_NAME:-REUP STUDIO}
+    volumes:
+      - ./data:/srv/portal/data
+      - ./downloads:/srv/dist
+    expose:
+      - "8088"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: reup_studio_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - portal
+
+volumes:
+  caddy_data:
+  caddy_config:

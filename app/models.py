@@ -103,9 +103,11 @@ class LogModel(Base):
 class JobCreate(BaseModel):
     source_url: str = Field(..., description="URL video Douyin, TikTok hoặc link video MP4 trực tiếp")
     custom_product_hint: Optional[str] = Field(None, description="Tên gợi ý sản phẩm nếu muốn cố định")
-    voice_code: Optional[str] = Field(None, description="Mã giọng đọc (Vbee hoặc Edge-TTS)")
-    auto_post_facebook: Optional[bool] = Field(False, description="Tự động đăng lên Facebook sau khi hoàn tất")
-    auto_post_tiktok: Optional[bool] = Field(False, description="Tự động đăng lên TikTok sau khi hoàn tất")
+    custom_translate_prompt: Optional[str] = Field(None, description="Custom prompt bối cảnh & xưng hô riêng cho video này")
+    translate_style_preset: Optional[str] = Field(None, description="Preset bối cảnh: review_tom_tat, tong_tai_hien_dai, co_trang_tien_hiep...")
+    voice_code: Optional[str] = Field(None, description="Mã giọng đọc")
+    auto_post_facebook: Optional[bool] = Field(None, description="Tự động đăng lên Facebook sau khi hoàn tất")
+    auto_post_tiktok: Optional[bool] = Field(None, description="Tự động đăng lên TikTok sau khi hoàn tất")
 
 
 class JobResponse(BaseModel):
@@ -144,14 +146,24 @@ class TestConnectionRequest(BaseModel):
 class BatchJobCreate(BaseModel):
     urls: List[str] = Field(..., description="Danh sách nhiều URL video để xử lý đồng loạt")
     custom_product_hint: Optional[str] = None
+    custom_translate_prompt: Optional[str] = None
+    translate_style_preset: Optional[str] = None
     voice_code: Optional[str] = None
-    auto_post_facebook: Optional[bool] = False
-    auto_post_tiktok: Optional[bool] = False
+    auto_post_facebook: Optional[bool] = None
+    auto_post_tiktok: Optional[bool] = None
 
 
 class AffiliateVerifyRequest(BaseModel):
     keyword_or_url: str = Field(..., description="Từ khóa sản phẩm hoặc link Shopee gốc cần tạo & kiểm tra link Affiliate")
     sub_id: Optional[str] = None
+    affiliate_id: Optional[str] = None
+
+
+class DeviceRegisterRequest(BaseModel):
+    email: str = Field(..., description="Gmail đăng ký kích hoạt lần đầu")
+    name: Optional[str] = ""
+    license_key: Optional[str] = ""
+    gemini_api_key: Optional[str] = ""
 
 
 class ManualPublishRequest(BaseModel):
