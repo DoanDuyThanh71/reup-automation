@@ -5,6 +5,8 @@ WORKDIR /srv/portal
 RUN pip install --no-cache-dir fastapi uvicorn[standard] python-multipart pydantic
 
 COPY server.py /srv/portal/server.py
+COPY payment_gateway.py /srv/portal/payment_gateway.py
+COPY payos.py /srv/portal/payos.py
 COPY static /srv/portal/static
 COPY taste /srv/portal/taste
 COPY demos /srv/portal/demos

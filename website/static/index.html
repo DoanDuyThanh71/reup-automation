@@ -241,16 +241,16 @@
     .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
     .footer-links a:hover { color: var(--ink); }
 
-    /* Modal */
+    /* Large VietQR Modal + Lightbox (synced from co-tuong) */
     dialog.rs-modal {
-      width: min(92vw, 460px); border: 1px solid var(--line-strong); border-radius: 20px;
-      background: var(--card); color: var(--ink); padding: 26px; box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+      width: min(94vw, 520px); border: 1px solid var(--line-strong); border-radius: 22px;
+      background: var(--card); color: var(--ink); padding: 26px; box-shadow: 0 28px 72px rgb(0 0 0 / 0.65);
     }
-    dialog.rs-modal::backdrop { background: rgb(0 0 0 / 0.68); }
+    dialog.rs-modal::backdrop { background: rgb(0 0 0 / 0.72); }
     .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
     .modal-close {
-      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong);
-      background: var(--bg); color: var(--ink); cursor: pointer; display: grid; place-items: center;
+      width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong);
+      background: var(--bg); color: var(--ink); cursor: pointer; display: grid; place-items: center; flex: none;
     }
     .modal-form { display: grid; gap: 12px; }
     .modal-field { display: grid; gap: 5px; font-size: 13px; font-weight: 500; }
@@ -258,11 +258,56 @@
       height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong);
       background: var(--bg); color: var(--ink); font-size: 15px;
     }
-    .qr-card {
-      margin-top: 14px; padding: 16px; border-radius: 14px; background: #ffffff; color: #111111;
-      display: grid; justify-items: center; gap: 6px; text-align: center;
+    .qr-panel { margin-top: 14px; display: grid; gap: 12px; }
+    .qr-hero {
+      padding: 18px; border-radius: 16px; background: #ffffff; color: #111111;
+      display: grid; justify-items: center; gap: 10px; text-align: center;
     }
-    .qr-card img { width: 200px; height: auto; border-radius: 8px; }
+    .qr-hero img { width: min(100%, 270px); height: auto; border-radius: 10px; cursor: zoom-in; }
+    .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .qr-act-btn {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid #d4d4d8;
+      background: #f4f4f5; color: #18181b; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .qr-act-btn:hover { background: #e4e4e7; }
+    .bank-card {
+      padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);
+      display: grid; gap: 8px; font-size: 13px;
+    }
+    .bank-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .bank-row span.k { color: var(--muted); }
+    .copy-wrap { display: inline-flex; align-items: center; gap: 6px; }
+    .memo-pill {
+      padding: 3px 8px; border-radius: 6px; background: color-mix(in oklab, var(--accent) 16%, var(--card));
+      border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+      font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ink);
+    }
+    .copy-btn {
+      padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line-strong);
+      background: var(--card); color: var(--ink); font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .copy-btn:hover { border-color: var(--action); }
+    .poll-bar {
+      display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+      padding: 8px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
+    }
+    .poll-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex: none;
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+    .paid-box {
+      margin-top: 12px; padding: 18px; border-radius: 16px;
+      background: color-mix(in oklab, #22c55e 14%, var(--bg));
+      border: 1px solid color-mix(in oklab, #22c55e 50%, transparent);
+      display: grid; gap: 8px; text-align: center;
+    }
+    dialog.qr-zoom-modal {
+      width: min(94vw, 440px); border: 1px solid var(--line-strong); border-radius: 20px;
+      background: #ffffff; color: #111111; padding: 20px; text-align: center;
+    }
+    dialog.qr-zoom-modal::backdrop { background: rgb(0 0 0 / 0.82); }
+    dialog.qr-zoom-modal img { width: 100%; max-width: 360px; height: auto; margin: 10px auto; border-radius: 10px; }
 
     @media (max-width: 1023px) {
       .top__nav { display: none; }
@@ -562,7 +607,7 @@
     </div>
   </footer>
 
-  <!-- VIETQR MODAL -->
+  <!-- LARGE VIETQR MODAL (SEPAY / PAYOS AUTO-POLLING) -->
   <dialog class="rs-modal" id="orderModal" aria-labelledby="orderModalTitle">
     <div class="modal-head">
       <div>
@@ -582,15 +627,65 @@
         <span>Số Zalo nhận thông báo</span>
         <input type="tel" name="zalo_phone" placeholder="09xx xxx xxx">
       </label>
-      <button class="btn btn--primary" type="submit" style="width:100%;">Lấy mã quét VietQR</button>
+      <button class="btn btn--primary" type="submit" id="orderSubmitBtn" style="width:100%;">Tạo mã quét VietQR tự động</button>
       <div id="orderStatusText" style="font-size:13px;color:var(--muted);"></div>
     </form>
 
-    <div class="qr-card" id="qrResultBox" hidden>
-      <strong id="qrOrderTitle" style="font-size:14px;">Quét VietQR để hoàn tất</strong>
-      <img id="qrImage" src="" alt="Mã VietQR">
-      <div style="font-size:13px;">Nội dung CK: <strong id="qrMemoCode" style="font-family:monospace;font-size:15px;"></strong></div>
+    <div class="qr-panel" id="qrResultBox" hidden>
+      <div class="qr-hero">
+        <strong id="qrOrderTitle" style="font-size:15px;">Quét mã VietQR để hoàn tất</strong>
+        <img id="qrImage" src="" alt="Mã VietQR chuyển khoản" title="Bấm để phóng to mã QR">
+        <div class="qr-actions">
+          <button type="button" class="qr-act-btn" id="btnZoomQr">🔍 Phóng to mã QR</button>
+          <a class="qr-act-btn" id="btnDownloadQr" href="#" download="VietQR_ReupStudio.png" target="_blank" rel="noopener">⬇ Mở / Lưu ảnh QR</a>
+        </div>
+      </div>
+
+      <div class="bank-card">
+        <div class="bank-row"><span class="k">Ngân hàng</span><strong id="qrBankVal">—</strong></div>
+        <div class="bank-row">
+          <span class="k">Số tài khoản</span>
+          <span class="copy-wrap">
+            <strong class="mono" id="qrAccVal">—</strong>
+            <button type="button" class="copy-btn" data-copy-target="qrAccVal">Sao chép</button>
+          </span>
+        </div>
+        <div class="bank-row"><span class="k">Chủ tài khoản</span><strong id="qrNameVal">—</strong></div>
+        <div class="bank-row"><span class="k">Số tiền</span><strong id="qrAmtVal">—</strong></div>
+        <div class="bank-row">
+          <span class="k">Nội dung CK (bắt buộc)</span>
+          <span class="copy-wrap">
+            <strong class="memo-pill" id="qrMemoCode">—</strong>
+            <button type="button" class="copy-btn" data-copy-target="qrMemoCode">Sao chép</button>
+          </span>
+        </div>
+      </div>
+
+      <a class="btn btn--primary" id="btnPayosCheckout" href="#" target="_blank" rel="noopener" hidden style="width:100%;">Mở cổng thanh toán payOS ↗</a>
+
+      <div class="poll-bar" id="qrPollBar">
+        <span class="poll-dot" aria-hidden="true"></span>
+        <span id="qrWaitMsg">Đang chờ thanh toán… Trang tự kích hoạt ngay khi tiền về.</span>
+      </div>
+      <button type="button" class="btn btn--secondary btn--sm" id="btnManualCheck" style="width:100%;">Tôi đã chuyển khoản, kiểm tra ngay</button>
     </div>
+
+    <div class="paid-box" id="paidSuccessBox" hidden>
+      <div style="font-size:18px;font-weight:800;color:#22c55e;">✓ Đã nhận thanh toán thành công!</div>
+      <div style="font-size:14px;" id="paidSuccessDesc">Mã xác nhận của bạn đã được kích hoạt tự động:</div>
+      <div><span class="memo-pill" style="font-size:16px;" id="paidFulfilledKey"></span></div>
+      <div style="font-size:12px;color:var(--muted);">Hãy lưu lại mã trên (đồng thời hệ thống đã gắn quyền trực tiếp cho Gmail của bạn).</div>
+    </div>
+  </dialog>
+
+  <!-- QR ZOOM LIGHTBOX -->
+  <dialog class="qr-zoom-modal" id="qrZoomModal" aria-label="Phóng to mã VietQR">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong style="font-size:15px;">Quét Mã VietQR</strong>
+      <button type="button" class="qr-act-btn" id="closeQrZoom">✕ Đóng</button>
+    </div>
+    <img id="qrZoomImg" src="" alt="Mã VietQR phóng to">
+    <div style="font-size:14px;">Số tiền: <strong id="qrZoomAmt">—</strong> · Nội dung: <strong id="qrZoomMemo" style="font-family:monospace;">—</strong></div>
   </dialog>
 
   <script type="module">
@@ -774,7 +869,7 @@
       savedLbl.textContent = `~${(n * 30 * 5000).toLocaleString('vi-VN')}đ / tháng`;
     });
 
-    // Order Modal
+    // Order Modal + Large VietQR + SePay/payOS Live Auto-Polling
     const modal = document.getElementById('orderModal');
     const modalTitle = document.getElementById('orderModalTitle');
     const modalDesc = document.getElementById('orderModalDesc');
@@ -785,46 +880,145 @@
     const qrImg = document.getElementById('qrImage');
     const qrMemo = document.getElementById('qrMemoCode');
     const qrTitle = document.getElementById('qrOrderTitle');
+    const qrBankVal = document.getElementById('qrBankVal');
+    const qrAccVal = document.getElementById('qrAccVal');
+    const qrNameVal = document.getElementById('qrNameVal');
+    const qrAmtVal = document.getElementById('qrAmtVal');
+    const qrWaitMsg = document.getElementById('qrWaitMsg');
+    const btnDownloadQr = document.getElementById('btnDownloadQr');
+    const btnPayosCheckout = document.getElementById('btnPayosCheckout');
+    const paidBox = document.getElementById('paidSuccessBox');
+    const paidKeyEl = document.getElementById('paidFulfilledKey');
+    const zoomModal = document.getElementById('qrZoomModal');
+    const zoomImg = document.getElementById('qrZoomImg');
+    const zoomAmt = document.getElementById('qrZoomAmt');
+    const zoomMemo = document.getElementById('qrZoomMemo');
+
+    let currentOrderCode = null;
+    let pollTimer = null;
+
+    const stopPolling = () => {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    };
+
+    const checkOrderOnce = async (manual = false) => {
+      if (!currentOrderCode) return;
+      if (manual && qrWaitMsg) qrWaitMsg.textContent = 'Đang đối soát giao dịch ngân hàng...';
+      try {
+        const r = await fetch(`/api/v1/orders/${encodeURIComponent(currentOrderCode)}`);
+        if (!r.ok) return;
+        const st = await r.json();
+        if (st.status === 'PAID') {
+          stopPolling();
+          qrBox.hidden = true;
+          orderForm.hidden = true;
+          paidKeyEl.textContent = st.fulfilled_key || st.transfer_content;
+          paidBox.hidden = false;
+        } else if (manual && qrWaitMsg) {
+          qrWaitMsg.textContent = 'Chưa thấy giao dịch vào — hệ thống vẫn đang tự động kiểm tra mỗi 4 giây...';
+        }
+      } catch {}
+    };
 
     document.querySelectorAll('[data-open-order]').forEach(btn => {
       btn.addEventListener('click', () => {
+        stopPolling();
+        currentOrderCode = null;
         const tier = btn.dataset.openOrder || 'MEET_50K';
         tierInput.value = tier;
+        orderForm.hidden = false;
         qrBox.hidden = true;
+        paidBox.hidden = true;
         orderStatus.textContent = '';
         if (tier === 'PRO_MONTHLY') {
           modalTitle.textContent = 'Mở khóa Pro Đa Kênh (149.000đ/tháng)';
-          modalDesc.textContent = 'Mở khóa chạy 5 luồng song song, không giới hạn kênh cho mã máy HWID của bạn.';
+          modalDesc.textContent = 'Tự động cấp mã PRO & mở khóa 5 luồng ngay sau khi quét VietQR.';
         } else {
           modalTitle.textContent = 'Giữ chỗ Buổi Meet Thực Chiến (50.000đ)';
-          modalDesc.textContent = 'Nhận lịch Google Meet + Video Record + Bộ mẫu Prompt qua Gmail.';
+          modalDesc.textContent = 'Tự động xác nhận vé Google Meet + Video Record ngay khi quét VietQR.';
         }
         modal.showModal();
       });
     });
-    document.getElementById('closeOrderModal')?.addEventListener('click', () => modal.close());
-    modal?.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+
+    document.getElementById('closeOrderModal')?.addEventListener('click', () => { stopPolling(); modal.close(); });
+    modal?.addEventListener('click', (e) => { if (e.target === modal) { stopPolling(); modal.close(); } });
+
+    document.querySelectorAll('[data-copy-target]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const el = document.getElementById(btn.dataset.copyTarget);
+        const val = (el?.textContent || '').trim();
+        if (!val || val === '—') return;
+        try {
+          await navigator.clipboard.writeText(val);
+          const old = btn.textContent;
+          btn.textContent = 'Đã chép ✓';
+          setTimeout(() => { btn.textContent = old; }, 1400);
+        } catch {}
+      });
+    });
+
+    const openQrZoom = () => {
+      if (!qrImg.src) return;
+      zoomImg.src = qrImg.src;
+      zoomAmt.textContent = qrAmtVal.textContent;
+      zoomMemo.textContent = qrMemo.textContent;
+      zoomModal?.showModal();
+    };
+    document.getElementById('btnZoomQr')?.addEventListener('click', openQrZoom);
+    qrImg?.addEventListener('click', openQrZoom);
+    document.getElementById('closeQrZoom')?.addEventListener('click', () => zoomModal?.close());
+    zoomModal?.addEventListener('click', (e) => { if (e.target === zoomModal) zoomModal.close(); });
+    document.getElementById('btnManualCheck')?.addEventListener('click', () => checkOrderOnce(true));
 
     orderForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      stopPolling();
       const fd = new FormData(orderForm);
       const email = String(fd.get('email') || '').trim();
-      if (!email || !email.includes('@')) { orderStatus.textContent = 'Nhập Gmail hợp lệ.'; return; }
-      orderStatus.textContent = 'Đang tạo mã VietQR...';
-      const res = await fetch('/api/v1/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(fd.entries())),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        orderStatus.textContent = '';
-        qrTitle.textContent = `Thanh toán ${Number(data.amount_vnd).toLocaleString('vi-VN')}đ`;
-        qrImg.src = data.qr_url;
-        qrMemo.textContent = data.order_code;
-        qrBox.hidden = false;
-      } else {
-        orderStatus.textContent = data.error || 'Lỗi tạo đơn.';
+      if (!email || !email.includes('@')) { orderStatus.textContent = 'Vui lòng nhập Gmail hợp lệ.'; return; }
+      orderStatus.textContent = 'Đang khởi tạo mã VietQR...';
+      try {
+        const res = await fetch('/api/v1/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(fd.entries())),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          orderStatus.textContent = '';
+          orderForm.hidden = true;
+          currentOrderCode = data.order_code;
+          const amtFmt = `${Number(data.amount_vnd).toLocaleString('vi-VN')} đ`;
+          qrTitle.textContent = `Quét mã VietQR (${amtFmt})`;
+          if (data.qr_url) {
+            qrImg.src = data.qr_url;
+            qrImg.hidden = false;
+            btnDownloadQr.href = data.qr_url;
+            btnDownloadQr.hidden = false;
+          } else {
+            qrImg.hidden = true;
+            btnDownloadQr.hidden = true;
+          }
+          if (data.checkout_url) {
+            btnPayosCheckout.href = data.checkout_url;
+            btnPayosCheckout.hidden = false;
+          } else {
+            btnPayosCheckout.hidden = true;
+          }
+          qrBankVal.textContent = data.bank_id || data.provider?.toUpperCase() || 'VietQR';
+          qrAccVal.textContent = data.account_no || '—';
+          qrNameVal.textContent = data.account_name || '—';
+          qrAmtVal.textContent = amtFmt;
+          qrMemo.textContent = data.transfer_content || data.order_code;
+          qrWaitMsg.textContent = 'Đang chờ thanh toán… Trang tự kích hoạt ngay khi tiền về.';
+          qrBox.hidden = false;
+          pollTimer = setInterval(() => checkOrderOnce(false), 4000);
+        } else {
+          orderStatus.textContent = data.error || 'Lỗi tạo đơn thanh toán.';
+        }
+      } catch {
+        orderStatus.textContent = 'Lỗi kết nối máy chủ.';
       }
     });
   </script>

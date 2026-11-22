@@ -45,6 +45,7 @@ promo_video/public/_tmp*
 
 # Credentials & environment
 .env
+website/.env
 *.pem
 *.key
 vbee_cookies.txt
